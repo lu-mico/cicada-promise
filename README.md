@@ -27,7 +27,7 @@ cicada-promise/
 - [x] Scene 1-3 構成案
 - [x] Scene 1 ドラフト（中文）
 - [x] Scene 2 執筆（ドラフト完成）
-- [ ] Scene 3 執筆
+- [x] Scene 3 執筆（ドラフト完成）
 
 ## 担当
 - **Yomi (編集長)**: プロット・本文執筆
