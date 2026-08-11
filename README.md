@@ -31,7 +31,7 @@
 - 「蝉蜕胸针」是关键物证
 
 ## 状态
-⏳ 等待构成批准
+⏳ 方案 v2 待批准（2026-08-11）— 详见 [outline/plan-v2.md](outline/plan-v2.md)
 
 ## GitHub
 https://github.com/lu-mico/cicada-promise
