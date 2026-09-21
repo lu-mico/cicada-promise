@@ -31,7 +31,14 @@
 - 「蝉蜕胸针」是关键物证
 
 ## 状态
-⏳ 方案 v2 待批准（2026-08-11）— 详见 [outline/plan-v2.md](outline/plan-v2.md)
+- 方案 v2 已批准（commit `1e85ac3`，2026-08-11）— 详见 [outline/plan-v2.md](outline/plan-v2.md)
+- 一页纸企划书：[proposals/one-pager.md](proposals/one-pager.md)（canonical 状态追踪）
+- ch1 A/B 样章：[manuscripts/ch1-sample.md](manuscripts/ch1-sample.md)（8/18 交付，小样，待评审 / 扩写）
+- ch2 A/B 第一稿：**9/22 启动**（COO 2026-09-21 授权）
+- Luminary 最终定档（中篇 12–15 万 vs 长篇 20 万+）：**CEO 待决清单**（36 天）
+- 工作基线：plan-v2（20 章 × A/B 交错），中篇默认、可回退
 
 ## GitHub
 https://github.com/lu-mico/cicada-promise
+
+主分支 `main` ｜ 当前 HEAD `f00937e`（post-v2-approval + ch1 sample）

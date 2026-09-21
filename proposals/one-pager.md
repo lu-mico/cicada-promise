@@ -81,9 +81,12 @@
 
 ## 八、当前状态
 
-- [x] 方案 v2 已批准（commit `1e85ac3`）
-- [x] **一页纸企划书** ← 本文件（proposals/one-pager.md）
-- [ ] ch1 A/B 双线样章 → manuscripts/ch1-sample.md
-- [ ] Luminary 最终定档（中篇 12–15 万 vs 长篇 20 万+）
+- [x] 方案 v2 已批准（commit `1e85ac3`，2026-08-11）
+- [x] **一页纸企划书** ← 本文件（proposals/one-pager.md，2026-08-18）
+- [x] ch1 A/B 双线样章 → manuscripts/ch1-sample.md（8/18 交付，小样 9708B / 243 行）
+- [ ] ch2 A/B 第一稿 → manuscripts/ch2-sample.md（**9/22 启动**，2000 字 / A+B 各 1000）
+- [ ] Luminary 最终定档（中篇 12–15 万 vs 长篇 20 万+）→ **CEO 待决清单**（自 8/16 起 36 天）
+- 工作基线 = plan-v2（20 章 × A/B 交错），中篇默认、可回退（COO 2026-09-21 授权）
 
 > 老板拍板只影响「中篇 vs 长篇」路径切换，**ch1–4 MSP 结构不受影响**——这是保底逻辑的核心。
+> 工作日提交规范：每日 `commit + push` + 频道一句话日报。
