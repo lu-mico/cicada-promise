@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""合成 ch3 章级样章：由六场切片组装 manuscripts/ch3-sample.md。
+"""合成章级样章：由六场切片组装 manuscripts/ch<N>-sample.md。
+
+用法（项目根目录）：
+    python3 tracks/compose.py            # 默认 ch3（输出与已交付的 a11955d 逐字节一致）
+    python3 tracks/compose.py ch4        # 合成第四章
+    python3 tracks/compose.py --chapter ch4
 
 口径与 tracks/check.py 完全一致（非目测，可复现）：
   正文段 = 从切片/分线标题行起，到「## 写作说明」/「## 下一切片」之前。
@@ -10,30 +15,26 @@
      留在正文段内会被 check.py 判为「B 线出现禁用现代物件」ERROR
   ③ 「## 下一切片」
 
-章级写作说明正文来自 tracks/ch3-notes.md，合成为文件末的「## 写作说明（评审参考）」。
+章级写作说明正文来自 tracks/ch<N>-notes.md，合成为文件末的「## 写作说明（评审参考）」。
 
-用法（项目根目录）：
-    python3 tracks/compose.py
+排布模式（per chapter）：
+  by_line     —— A 线整块在前、B 线整块在后（ch3 原排法；**ch3 的评审 S1「双线未交错」不要带入 ch4**）
+  interleaved —— A/B 逐场交错（ch4 用；依据 plan-v2 §5「20 章 × 双线，每章 A/B 交错」）
 """
 
 import re
+import sys
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "manuscripts" / "ch3-sample.md"
-NOTES = ROOT / "tracks" / "ch3-notes.md"
-
-SLICES = ["A1", "A2", "A3", "B1", "B2", "B3"]
 
 SECTION = re.compile(r"^##\s+[AB]\s*(?:线|\d)")
 END_MARK = re.compile(r"^##\s*(写作说明|下一切片)")
 INNER_H = re.compile(r"^##\s+([一二三四五六七八九十]+)\s*$")
 YEAR_TAG = re.compile(r"（([^）]*?)[，,]?\s*(?:19|20)\d{2}）")
+TRAIL_POV = re.compile(r"（[^）]*）\s*$")
 
-A_HEADER = "## A 线 · 不在场证明（周睿视角，2026）"
-B_HEADER = "## B 线 · 重伤（晓晓视角，1996）"
-
-HEAD = """# 《夏蝉的诺言》第三章·样章（A/B 双线）
+HEAD_CH3 = """# 《夏蝉的诺言》第三章·样章（A/B 双线）
 
 > 编制：Yomi（主编）｜日期：2026-10-29
 > 对应大纲：[outline/plan-v2.md §5 ch3](../outline/plan-v2.md)
@@ -44,9 +45,51 @@ HEAD = """# 《夏蝉的诺言》第三章·样章（A/B 双线）
 > 版本：v0.1（章级首合，2026-10-29）
 """
 
+HEAD_CH4 = """# 《夏蝉的诺言》第四章·样章（A/B 双线）
 
-def extract(slice_id):
-    path = ROOT / "manuscripts" / f"ch3-{slice_id}.md"
+> 编制：Yomi（主编）｜日期：2026-11-03
+> 对应大纲：[outline/plan-v2.md §5 ch4](../outline/plan-v2.md)
+> 合成来源：A 线 = [ch4-A1](ch4-A1.md) + [ch4-A2](ch4-A2.md) + [ch4-A3](ch4-A3.md)；
+> B 线 = [ch4-B1](ch4-B1.md) + [ch4-B2](ch4-B2.md) + [ch4-B3](ch4-B3.md)
+> 合成顺序：A1 → B1 → A2 → B2 → A3 → B3（plan-v2 §5「20 章 × 双线，每章 A/B 交错」；
+> ch3 评审 S1「双线未交错」的教训不带入本章）
+> 切片字数（check.py 实测）：A1 1,377 · A2 1,370 · A3 1,472 ｜ B1 1,382 · B2 1,311 · B3 1,400
+> 章级完成判据：[tracks/ch3-done.md](../tracks/ch3-done.md)（字数口径唯一定义在 §四）
+> 版本：v0.1（章级首合，2026-11-03）
+"""
+
+CHAPTERS = {
+    "ch3": {
+        "out": "ch3-sample.md",
+        "notes": "ch3-notes.md",
+        "order": ["A1", "A2", "A3", "B1", "B2", "B3"],
+        "mode": "by_line",
+        "slice_title": "full",   # H3 保留切片原题（含视角）
+        "lines": {
+            "A": {"title": "## A 线 · 不在场证明", "pov": "周睿视角，2026"},
+            "B": {"title": "## B 线 · 重伤", "pov": "晓晓视角，1996"},
+        },
+        "head": HEAD_CH3,
+    },
+    "ch4": {
+        "out": "ch4-sample.md",
+        "notes": "ch4-notes.md",
+        # 交错：每场 A/B 交替（plan-v2 §5「每章 A/B 交错」）
+        "order": ["A1", "B1", "A2", "B2", "A3", "B3"],
+        "mode": "interleaved",
+        "slice_title": "short",  # H3 = "### A1 · 档案室"（视角由分线标题承担）
+        "lines": {
+            "A": {"title": "## A 线 · 记录中断", "pov": "周睿视角，2026"},
+            "B": {"title": "## B 线 · 灯台之约", "pov": "晓晓视角，1996"},
+        },
+        "head": HEAD_CH4,
+    },
+}
+
+
+def extract(chapter, slice_id):
+    """取一场切片的正文段。返回 (H3 标题, 正文行列表)。"""
+    path = ROOT / "manuscripts" / f"{chapter}-{slice_id}.md"
     lines = path.read_text(encoding="utf-8").split("\n")
     for i, line in enumerate(lines):
         if not SECTION.match(line):
@@ -71,22 +114,69 @@ def extract(slice_id):
     raise SystemExit(f"找不到正文段：{path}")
 
 
-def main():
-    parts = [HEAD, "\n---\n"]
-    for label, header in (("A", A_HEADER), ("B", B_HEADER)):
-        parts.append("\n" + header + "\n\n")
-        for sid in SLICES:
-            if not sid.startswith(label):
-                continue
-            title, buf = extract(sid)
-            parts.append(title + "\n\n")
+def slice_head(chapter, slice_id, full_title):
+    """H3 标题：full = 原题（ch3）；short = "### A1 · 档案室"（ch4）。"""
+    if CHAPTERS[chapter]["slice_title"] == "full":
+        return full_title
+    body = full_title[3:].strip()            # 去掉 "###"
+    m = re.match(r"^([AB]\d)\s*·\s*(.*)$", body)
+    if not m:
+        return full_title
+    sid, rest = m.group(1), TRAIL_POV.sub("", m.group(2)).strip()
+    return f"### {sid} · {rest}" if rest else f"### {sid}"
+
+
+def line_header(chapter, label, cont):
+    spec = CHAPTERS[chapter]["lines"][label]
+    if cont:
+        return f"{spec['title']}（续）"
+    return f"{spec['title']}（{spec['pov']}）"
+
+
+def compose(chapter):
+    cfg = CHAPTERS[chapter]
+    parts = [cfg["head"], "\n---\n"]
+    if cfg["mode"] == "by_line":
+        for label in ("A", "B"):
+            parts.append("\n" + line_header(chapter, label, False) + "\n\n")
+            for sid in cfg["order"]:
+                if not sid.startswith(label):
+                    continue
+                full, buf = extract(chapter, sid)
+                parts.append(slice_head(chapter, sid, full) + "\n\n")
+                parts.append("\n".join(buf).strip() + "\n\n")
+            parts.append("\n---\n")
+    else:  # interleaved
+        seen = set()
+        for sid in cfg["order"]:
+            label = sid[0]
+            parts.append("\n" + line_header(chapter, label, label in seen) + "\n\n")
+            seen.add(label)
+            full, buf = extract(chapter, sid)
+            parts.append(slice_head(chapter, sid, full) + "\n\n")
             parts.append("\n".join(buf).strip() + "\n\n")
         parts.append("\n---\n")
-    parts.append("\n" + NOTES.read_text(encoding="utf-8").strip() + "\n")
+    notes = ROOT / "tracks" / cfg["notes"]
+    if not notes.exists():
+        raise SystemExit(f"章级写作说明不存在：{notes}")
+    parts.append("\n" + notes.read_text(encoding="utf-8").strip() + "\n")
     text = "".join(parts)
-    OUT.write_text(text, encoding="utf-8")
-    print(f"已写出 {OUT}（{len(text)} 字符）")
+    out = ROOT / "manuscripts" / cfg["out"]
+    out.write_text(text, encoding="utf-8")
+    print(f"已写出 {out}（{len(text)} 字符，章节 {chapter}，排布 {cfg['mode']}）")
+
+
+def main():
+    args = sys.argv[1:]
+    if args and args[0] in ("-c", "--chapter"):
+        args = args[1:]
+    chapter = args[0] if args else "ch3"
+    if chapter not in CHAPTERS:
+        print(f"未知章节：{chapter}（可选：{', '.join(CHAPTERS)}）", file=sys.stderr)
+        return 2
+    compose(chapter)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
