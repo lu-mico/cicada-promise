@@ -5,6 +5,9 @@
 > 复现：`node ~/.openclaw/workspace-yomi/skills/story-deslop/scripts/check-ai-patterns.js --json manuscripts/ch4-sample.md`
 > ⚠️ **改切片原件再 `python3 tracks/compose.py --chapter ch4` 重合成**（`ch4-sample.md` 是生成物，直接改会被覆盖）。
 
+> ⚠️ **行号以重跑 detector 为准**（切片一改行号就漂）：`check-ai-patterns.js --json manuscripts/ch4-sample.md`（合成稿）
+> 或对六场切片逐个跑（`manuscripts/ch4-A1.md` … `ch4-B3.md`）。
+
 ## 一、blocking（必须处理）
 
 ### L43 · em-dash
