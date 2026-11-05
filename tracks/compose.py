@@ -19,7 +19,14 @@
 
 排布模式（per chapter）：
   by_line     —— A 线整块在前、B 线整块在后（ch3 原排法；**ch3 的评审 S1「双线未交错」不要带入 ch4**）
-  interleaved —— A/B 逐场交错（ch4 用；依据 plan-v2 §5「20 章 × 双线，每章 A/B 交错」）
+  interleaved —— A/B 逐场交错（ch4 用；依据 plan-v2 §5「20 章 × 双线，每章 A/B 交错」）。
+                  2026-11-05 体例裁定：**每场一个 H2（场景标题带视角）**，不再输出
+                  「## A 线 · …（续）」的分线 H2，也不再输出 H3 —— 交错排布下
+                  「（续）」会出现四个（读者会读到四张「续」），H2+H3 双层则把成稿
+                  切成两层目录。场景代号（A1／B2…）保留在 H2 里：ch3 已交付稿即
+                  「### A1 · …」这一体例，且 tracks/check.py 的正文段口径
+                  （SECTION 前缀 `## A1 ·` / `## A 线 ·`）依赖该前缀——不能在
+                  ch4 v1.0 里顺手改测量脚本。彻底去代号另作书级口径变更。
 """
 
 import re
@@ -53,6 +60,7 @@ HEAD_CH4 = """# 《夏蝉的诺言》第四章·样章（A/B 双线）
 > B 线 = [ch4-B1](ch4-B1.md) + [ch4-B2](ch4-B2.md) + [ch4-B3](ch4-B3.md)
 > 合成顺序：A1 → B1 → A2 → B2 → A3 → B3（plan-v2 §5「20 章 × 双线，每章 A/B 交错」；
 > ch3 评审 S1「双线未交错」的教训不带入本章）
+> 本章双线：A 线 · 记录中断（周睿视角，2026）｜ B 线 · 灯台之约（晓晓视角，1996）
 > 切片字数（check.py 实测）：A1 1,377 · A2 1,370 · A3 1,472 ｜ B1 1,382 · B2 1,311 · B3 1,400
 > 章级完成判据：[tracks/ch3-done.md](../tracks/ch3-done.md)（字数口径唯一定义在 §四）
 > 版本：v0.1（章级首合，2026-11-03）
@@ -87,8 +95,12 @@ CHAPTERS = {
 }
 
 
-def extract(chapter, slice_id):
-    """取一场切片的正文段。返回 (H3 标题, 正文行列表)。"""
+def extract(chapter, slice_id, strip_year=True):
+    """取一场切片的正文段。返回 (H3 标题, 正文行列表)。
+
+    strip_year=True 时剥掉标题里的年份（B 线绝对禁止年份进入正文段）；
+    A 线在交错排布下保留年份（视角标签要写清 2026）。
+    """
     path = ROOT / "manuscripts" / f"{chapter}-{slice_id}.md"
     lines = path.read_text(encoding="utf-8").split("\n")
     for i, line in enumerate(lines):
@@ -103,7 +115,8 @@ def extract(chapter, slice_id):
             buf.append(lines[j])
             j += 1
         # 标题：h2 → h3，并剥掉视角里的年份数字（B 线绝对禁止年份出现在正文段）
-        title = YEAR_TAG.sub(r"（\1）", title)
+        if strip_year:
+            title = YEAR_TAG.sub(r"（\1）", title)
         title = "###" + title[2:]
         # 段内小标题：h2「## 一」→ h4「#### 一」
         buf = [INNER_H.sub(r"#### \1", ln) for ln in buf]
@@ -146,14 +159,12 @@ def compose(chapter):
                 parts.append(slice_head(chapter, sid, full) + "\n\n")
                 parts.append("\n".join(buf).strip() + "\n\n")
             parts.append("\n---\n")
-    else:  # interleaved
-        seen = set()
+    else:  # interleaved —— 每场一个 H2，无「（续）」、无 H3 双层
         for sid in cfg["order"]:
             label = sid[0]
-            parts.append("\n" + line_header(chapter, label, label in seen) + "\n\n")
-            seen.add(label)
-            full, buf = extract(chapter, sid)
-            parts.append(slice_head(chapter, sid, full) + "\n\n")
+            # A 线标题保留年份（B 线标题剥掉年份）
+            full, buf = extract(chapter, sid, strip_year=(label == "B"))
+            parts.append("\n## " + full[3:].strip() + "\n\n")
             parts.append("\n".join(buf).strip() + "\n\n")
         parts.append("\n---\n")
     notes = ROOT / "tracks" / cfg["notes"]
