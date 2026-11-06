@@ -119,6 +119,8 @@ python3 tracks/check.py manuscripts/ch5-<切片号>.md
   - 两条都缺 = **宿主进程级漏跑**（OpenClaw 进程当时不在位）→ 当场手动 `openclaw cron run be2b1e10` 补跑，不等下一个 21:30。
   - 有条目但 0 commit = 才查选片规则（R33 的 10/30 属此类：候选集为空 → 空跑）。
 - `cron list` 的「Next 2m ago」是**下次触发时刻**，不是「lastRun」；「Last」栏才是上一轮。
+- ⚠️ **巡检时点必须晚于切片槽**：切片 cron 在 **21:30**，巡检在 **20:00**——巡检查「当日 commit」时，当天的切片窗口**还没开**，正常一天也会是 0。**R39（11/06 20:00）误判「A1 没接上」即由此而来**：下一场 A1 的正常交付时间是**当晚 21:30**，不是明晚。判据改为：**22:05 之后**才查当日产出（21:30 槽 + 135s 运行时长已过）。
+- 📌 **22:05 自动验收已上线（R39 新增）**：cron job `9f6e770e`（ch5 slice verify 22:05，`5 22 * * *` Asia/Tokyo，command payload 跑 `tracks/verify_daily_slice.sh`）——21:30 后查两条证据：① `git log` 当日 commit ② `cron runs` 当日条目。两条都缺且下一场切片文件不存在 → **自动补跑 `be2b1e10`**；有条目但 0 commit → 只告警不重跑（防重复交付）；一切正常 → 打印 `NO_REPLY` 静默，不刷频道。**§八 的纪律从此是可执行轨道，不靠自律。**
 - **cron「跑过」≠「产出」**：验收必须看 `git log` 有无新 commit，不能看 `lastRunStatus=ok` / `delivered=true`。
 - **压缩失败后不要在原会话续**：长会话 auto-compaction 失败后换新会话再跑（11/04 的 ch4 评审就是这样丢掉的）。
 - **派子代理必须交代工具边界**：本机 macOS **没装 `rg`**，子代理调 `rg` 会直接失败（整轮 ~50 秒挂掉）；只许用 `grep` / `sed` / `cat` / `awk` / `wc`。
