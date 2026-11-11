@@ -72,11 +72,12 @@ HEAD_CH5 = """# 《夏蝉的诺言》第五章·样章（A/B 双线）
 > 对应大纲：[outline/plan-v2.md §5 ch5](../outline/plan-v2.md)
 > 合成来源：A 线 = [ch5-A1](ch5-A1.md) + [ch5-A2](ch5-A2.md) + [ch5-A3](ch5-A3.md)；
 > B 线 = [ch5-B1](ch5-B1.md) + [ch5-B2](ch5-B2.md) + [ch5-B3](ch5-B3.md)
-> 合成顺序：B1 → A1 → B2 → A2 → B3 → A3（plan-v2 §5「每章 A/B 交错」）
+> 合成顺序：A1 → B1 → A2 → B2 → A3 → B3（plan-v2 §5「每章 A/B 交错」，严格逐场交替；体例同 ch4；
+> **全章最后一段落在 B3，A 线收束在 A3** —— tracks/ch5-notes.md §三 判据 3）
 > 本章双线：A 线 · 失踪档案（周睿视角，2026）｜ B 线 · 家破人亡（晓晓视角，1996）
-> 切片字数（check.py 实测）：待合稿时回填
+> 切片字数（check.py 实测）：A1 1,558 · A2 1,699 · A3 1,680 ｜ B1 1,551 · B2 1,690 · B3 1,380
 > 唯一事实源：[tracks/ch5-daily.md §三](ch5-daily.md)（从 ch4-notes.md §六 抄入，**只读**）
-> 版本：v0.1（章级首合，待合稿）
+> 版本：v0.1（章级首合，2026-11-12；阶段 1 合成 + 回填）
 """
 
 CHAPTERS = {
@@ -108,8 +109,10 @@ CHAPTERS = {
     "ch5": {
         "out": "ch5-sample.md",
         "notes": "ch5-notes.md",
-        # 交错：每场 A/B 交替（plan-v2 §5「每章 A/B 交错」）；表序与 tracks/ch5-daily.md 一致
-        "order": ["B1", "A1", "B2", "A2", "B3", "A3"],
+        # 交错：每场 A/B 严格交替（plan-v2 §5「每章 A/B 交错」）；体例同 ch4。
+        # 2026-11-12 阶段 1 更正：原序 B1→A1→B2→A2→B3→A3 使全章末段落 A3，
+        # 违反 tracks/ch5-notes.md §三「全章最后一段落在 B3，A 线收束在 A3」→ 改为 A1 起步、B3 收尾。
+        "order": ["A1", "B1", "A2", "B2", "A3", "B3"],
         "mode": "interleaved",
         "slice_title": "short",  # H2 = "### B1 · 街上的话"（去生产代号，见 2026-11-05 体例裁定）
         "lines": {
