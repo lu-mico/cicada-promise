@@ -1,5 +1,5 @@
 #!/bin/bash
-# ch5 每日切片交付验收（tracks/ch5-daily.md §八 铁律的自动化版）
+# ch6 每日切片交付验收（tracks/ch6-daily.md §八 铁律的自动化版）
 #
 # 规则（21:30 切片后 22:00 查两条证据）：
 #   ① git log 有无当日 commit      ② openclaw cron runs 有无当日「成功」条目
@@ -21,10 +21,10 @@
 set -u
 REPO="/Users/lumico/.openclaw/workspace-yomi/projects/cicada-promise"
 JOB="be2b1e10-33ef-47f4-bd25-026fef90fa86"
-# 切片表顺序（tracks/ch5-daily.md §二）：表序第一个尚不存在的切片 = 下一场
-ORDER="B1 A1 B2 A2 B3 A3"
+# 切片表顺序（tracks/ch6-daily.md §二）：表序第一个尚不存在的切片 = 下一场
+ORDER="A1 B1 A2 B2 A3 B3"
 
-cd "$REPO" 2>/dev/null || { echo "🔴 ch5 验收失败：进不了项目仓 $REPO"; exit 0; }
+cd "$REPO" 2>/dev/null || { echo "🔴 ch6 验收失败：进不了项目仓 $REPO"; exit 0; }
 
 TODAY="$(TZ=Asia/Tokyo date +%F)"
 NOW_HM="$(TZ=Asia/Tokyo date +%H%M)"
@@ -37,7 +37,7 @@ fi
 
 NEXT=""
 for s in $ORDER; do
-  if [ ! -f "manuscripts/ch5-$s.md" ]; then NEXT="$s"; break; fi
+  if [ ! -f "manuscripts/ch6-$s.md" ]; then NEXT="$s"; break; fi
 done
 
 # 六场齐 → 本章切片已完稿
@@ -68,7 +68,7 @@ print(ok, bad)
 " 2>/dev/null || echo "0 0"
 }
 
-COMMITS=$(git log --since="$TODAY 00:00" --pretty=%s 2>/dev/null | grep -c "ch5 .*切片")
+COMMITS=$(git log --since="$TODAY 00:00" --pretty=%s 2>/dev/null | grep -c "ch6 .*切片")
 read -r RUNS_OK RUNS_BAD <<<"$(count_runs)"
 
 # 当日已有切片 commit → 正常
@@ -76,13 +76,13 @@ if [ "$COMMITS" -ge 1 ]; then echo "NO_REPLY"; exit 0; fi
 
 # 当日有**成功**条目 → 槽跑过了却 0 commit → 只告警，不自动重跑（防重复交付）
 if [ "${RUNS_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch5 切片异常（$TODAY）：cron 有当日成功条目但 0 commit，下一场应是 $NEXT。→ 选片规则/限流/提交失败问题，需人工查；不要重复提交已存在的切片。"
+  echo "🔴 ch6 切片异常（$TODAY）：cron 有当日成功条目但 0 commit，下一场应是 $NEXT。→ 选片规则/限流/提交失败问题，需人工查；不要重复提交已存在的切片。"
   exit 0
 fi
 
 # 下一场文件已存在却没 commit → 上一轮还在写或提交失败，不自动重跑（避免同夜双交）
-if [ -f "manuscripts/ch5-$NEXT.md" ]; then
-  echo "🟡 ch5 切片待提交（$TODAY）：manuscripts/ch5-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
+if [ -f "manuscripts/ch6-$NEXT.md" ]; then
+  echo "🟡 ch6 切片待提交（$TODAY）：manuscripts/ch6-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
   exit 0
 fi
 
@@ -98,12 +98,12 @@ if [ "${DRY_RUN:-0}" = "1" ]; then
   exit 0
 fi
 
-( openclaw cron run "$JOB" >/tmp/ch5-backfill.log 2>&1 & )
+( openclaw cron run "$JOB" >/tmp/ch6-backfill.log 2>&1 & )
 sleep 10
 read -r RUNS2_OK RUNS2_BAD <<<"$(count_runs)"
 if [ "${RUNS2_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch5 切片漏跑（$TODAY）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），下一场 = $NEXT。"
+  echo "🔴 ch6 切片漏跑（$TODAY）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），下一场 = $NEXT。"
 else
-  echo "🔴 ch5 切片漏跑（$TODAY）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。下一场 = $NEXT。"
+  echo "🔴 ch6 切片漏跑（$TODAY）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。下一场 = $NEXT。"
 fi
 exit 0

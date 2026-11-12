@@ -80,6 +80,20 @@ HEAD_CH5 = """# 《夏蝉的诺言》第五章·样章（A/B 双线）
 > 版本：v1.0（2026-11-12；阶段 1 合成 → 阶段 2 去 AI 味 blocking 9→0 → 阶段 3 评审裁定改稿：S1-1 选项 A ＋纸性补充、S1-1b、S2-2 口径①、S3-1、S3-2 → 一致性订正（正文与元信息同源）→ 待 Mico 认可记录）
 """
 
+HEAD_CH6 = """# 《夏蝉的诺言》第六章·样章（A/B 双线）
+
+> 编制：Yomi（主编）｜日期：2026-11-12 立轨
+> 对应大纲：[outline/plan-v2.md §5 ch6](../outline/plan-v2.md)
+> 合成来源：A 线 = [ch6-A1](ch6-A1.md) + [ch6-A2](ch6-A2.md) + [ch6-A3](ch6-A3.md)；
+> B 线 = [ch6-B1](ch6-B1.md) + [ch6-B2](ch6-B2.md) + [ch6-B3](ch6-B3.md)
+> 合成顺序：A1 → B1 → A2 → B2 → A3 → B3（plan-v2 §5「每章 A/B 交错」，严格逐场交替；体例同 ch4／ch5；
+> **全章最后一段落在 B3，A 线收束在 A3** —— tracks/ch6-notes.md §三 判据 3）
+> 本章双线：A 线 · 伤人记录（周睿视角，2026）｜ B 线 · 立誓（晓晓视角，1996）
+> 切片字数（check.py 实测，阶段 1 回填）：待回填
+> 唯一事实源：[tracks/ch6-daily.md §三](ch6-daily.md)（2026-11-12 从 ch5-daily.md §三 抄入，**只读**）
+> 版本：v0.0（2026-11-12 立轨骨架；切片未交付）
+"""
+
 CHAPTERS = {
     "ch3": {
         "out": "ch3-sample.md",
@@ -120,6 +134,20 @@ CHAPTERS = {
             "B": {"title": "## B 线 · 家破人亡", "pov": "晓晓视角，1996"},
         },
         "head": HEAD_CH5,
+    },
+    "ch6": {
+        "out": "ch6-sample.md",
+        "notes": "ch6-notes.md",
+        # 交错：A/B 严格交替（plan-v2 §5「每章 A/B 交错」）；体例同 ch4／ch5。
+        # 2026-11-12 立轨：与 ch4／ch5 同一手势 —— 全章末段落 B3，A 线收束在 A3。
+        "order": ["A1", "B1", "A2", "B2", "A3", "B3"],
+        "mode": "interleaved",
+        "slice_title": "short",  # H2 = "### A1 · 三个字"（去生产代号，沿用 2026-11-05 体例裁定）
+        "lines": {
+            "A": {"title": "## A 线 · 伤人记录", "pov": "周睿视角，2026"},
+            "B": {"title": "## B 线 · 立誓", "pov": "晓晓视角，1996"},
+        },
+        "head": HEAD_CH6,
     },
 }
 
