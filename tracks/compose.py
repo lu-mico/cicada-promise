@@ -87,7 +87,7 @@ HEAD_CH6 = """# 《夏蝉的诺言》第六章·样章（A/B 双线）
 > 合成来源：A 线 = [ch6-A1](ch6-A1.md) + [ch6-A2](ch6-A2.md) + [ch6-A3](ch6-A3.md)；
 > B 线 = [ch6-B1](ch6-B1.md) + [ch6-B2](ch6-B2.md) + [ch6-B3](ch6-B3.md)
 > 合成顺序：A1 → B1 → A2 → B2 → A3 → B3（plan-v2 §5「每章 A/B 交错」，严格逐场交替；体例同 ch4／ch5；
-> **全章最后一段落在 B3，A 线收束在 A3** —— tracks/ch6-notes.md §三 判据 3）
+> **全章最后一段落在 B3，A 线收束在 A3** —— tracks/ch6-notes.md §四 判据 3）
 > 本章双线：A 线 · 伤人记录（周睿视角，2026）｜ B 线 · 立誓（晓晓视角，1996）
 > 切片字数（check.py 实测，阶段 1 回填）：待回填
 > 唯一事实源：[tracks/ch6-daily.md §三](ch6-daily.md)（2026-11-12 从 ch5-daily.md §三 抄入，**只读**）

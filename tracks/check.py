@@ -24,6 +24,10 @@ import re
 import sys
 import pathlib
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import theme_rules as tr  # noqa: E402  —— 主题句门禁（归一化匹配 + 章号分级）
+import span_rules as sr  # noqa: E402  —— 年数跨度门禁（rule 4：只拦「三十年」式推算）
+
 HANZI = re.compile(r"[\u4e00-\u9fff]")
 YEAR = re.compile(r"\b(?:19|20)\d{2}\b")
 
@@ -72,14 +76,25 @@ def check_file(path):
     picked = slice_bodies(text)
     if not picked:
         errors.append("找不到正文段（既没有「## A1 ·」也没有「## A 线 ·」）")
-    is_ch3 = "ch3" in p.name
+    # 主题句门禁（2026-11-12 补洞）：
+    #   旧判据 `"时间是一种很危险的东西" in body_no_head` **从 ch1 起从未成立**——
+    #   ch1 原句被对话打断（"时间，"他说，"是一种很危险的东西。"），字面串在正文里不存在。
+    #   现改为归一化后匹配（对话插入 ≤8 字照样命中），按章号分级：
+    #   ch1（立句）／ch2（降级）已交付允许；**ch3 起为 ERROR**（ch3–ch7 禁第三句）。
+    #   新第三句无字可 grep → 结构规则（抽象名词作主语的判断句）只报候选，由评审兜底。
+    chapter = tr.chapter_of(p.name)
+    theme_banned = tr.banned_for(chapter)
     for title, body, body_no_head in picked:
         hanzi = len(HANZI.findall(body))
         is_b = bool(re.match(r"^B", title))
         print(f"  · {title}  正文汉字 {hanzi}")
-        n30 = body.count("三十")
-        if n30:
-            errors.append(f"{title}: 「三十」出现 {n30} 次（rule 4 破线）")
+        # 年数跨度（rule 4）：**只拦「三十年」式推算**，不拦年龄说法。
+        # 旧判据是 body.count("三十") → 把「三十多岁」这类年龄也判成 ERROR
+        # （ch1 A 线「三十多岁的男人」是 Mico 已认可的交付稿，却因此挂着 ERROR 1）。
+        # 同时补上旧门禁**根本没查**的两种写法：「二十九年」「多少年」。
+        spans = sr.span_mentions(body)
+        if spans:
+            errors.append(f"{title}: 年数跨度出现 {len(spans)} 次（rule 4 破线）→ {spans[:3]}")
         years = YEAR.findall(body_no_head)
         if years:
             (errors if is_b else warns).append(
@@ -93,9 +108,14 @@ def check_file(path):
             whits = [w for w in B_WARN if w in body]
             if whits:
                 warns.append(f"{title}: B 线出现需确认年代感的物件 {whits}")
-        if "时间是一种很危险的东西" in body_no_head:
-            msg = f"{title}: 出现林默主题句（ch1 已立）"
-            (errors if is_ch3 else warns).append(msg)
+        hits = tr.theme_hits(body_no_head)
+        if hits:
+            msg = f"{title}: 出现林默主题句（ch1 已立）→ {hits}"
+            (errors if theme_banned else warns).append(msg)
+        if theme_banned:
+            cands = tr.abstract_candidates(body_no_head)
+            if cands:
+                warns.append(f"{title}: 抽象名词作主语的判断句（候选，需评审判定是否第三句）→ {cands[:3]}")
     for e in errors:
         print(f"  [ERROR] {e}")
     for w in warns:
