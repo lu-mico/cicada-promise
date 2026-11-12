@@ -28,14 +28,39 @@ _SPAN_PATTERNS = [
     re.compile(r"30\s*年"),
 ]
 
+# ── 软跨度（只报 WARN，交评审；不拦）────────────────────────────────────
+# Mico 2026-11-12 10:41：「十几年／二十多年／十多年／好多年」这类**不构成推算**
+# （已交付稿里本来就有这类写法）→ **只报 WARN，不报 ERROR**。
+# 注意末尾必须是「年/载」才算跨度：「二十多个人」「十几个牌」是计数，**不匹配**。
+_SOFT_SPAN_PATTERNS = [
+    re.compile(r"十几[年载]"),
+    re.compile(r"二十多[年载]"),
+    re.compile(r"十多年"),
+    re.compile(r"十来年"),
+    re.compile(r"二十来年"),
+    re.compile(r"好多年"),
+]
+
 
 def span_mentions(body):
-    """正文段里的年数跨度提及（返回上下文片段列表）。
+    """正文段里的年数跨度提及（返回上下文片段列表）——**硬跨度，报 ERROR**。
 
     年龄/计数/时刻写法不计入；「三十」后接年/载一律计入（默认严格）。
     """
     out = []
     for pat in _SPAN_PATTERNS:
+        for m in pat.finditer(body):
+            out.append(body[max(0, m.start() - 6):m.end() + 8].replace("\n", " "))
+    return out
+
+
+def soft_span_mentions(body):
+    """软跨度提及（十几年／二十多年／十多年／好多年…）——**只报 WARN，交评审**。
+
+    这类写法不构成年数推算（已交付稿里本来就有），故不作硬拦截。
+    """
+    out = []
+    for pat in _SOFT_SPAN_PATTERNS:
         for m in pat.finditer(body):
             out.append(body[max(0, m.start() - 6):m.end() + 8].replace("\n", " "))
     return out

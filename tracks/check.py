@@ -95,6 +95,10 @@ def check_file(path):
         spans = sr.span_mentions(body)
         if spans:
             errors.append(f"{title}: 年数跨度出现 {len(spans)} 次（rule 4 破线）→ {spans[:3]}")
+        # 软跨度（十几年／二十多年／十多年／好多年）：**不构成推算** → 只报 WARN，交评审
+        soft = sr.soft_span_mentions(body)
+        if soft:
+            warns.append(f"{title}: 软跨度提及（不拦，交评审）→ {soft[:3]}")
         years = YEAR.findall(body_no_head)
         if years:
             (errors if is_b else warns).append(
