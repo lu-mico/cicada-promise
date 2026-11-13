@@ -28,6 +28,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import theme_rules as tr  # noqa: E402
 import span_rules as sr  # noqa: E402
+import bline_rules as br  # noqa: E402
 
 # ── 主题句用例（negative case：喂必然违规的句子，断言「必须命中」）───────────
 # 前 6 条＝已交付写法回归；后 12 条＝**攻击用**（最容易漏的写法）。
@@ -80,6 +81,22 @@ SPAN_CASES = [
     ("三十七分（时刻，应放行）", '　钟面停在三十七分。', False),
     ("他今年三十岁了（年龄，应放行）", '　他今年三十岁了。', False),
     ("干净句（不得误报）", '　她把纸边对齐，抹了两遍。', False),
+]
+
+
+# ── B 线红线用例（ch4 起：署名语汇 / 首字母 L / 禁用称谓）────────────────────
+# 结构：(名称, 正文, 是否应当命中, 章号, 是否 B 线)
+B_REDLINE_CASES = [
+    ("红线·永远", '　他永远记得那天。', True, 6, True),
+    ("红线·永不", '　他说她永不回来。', True, 6, True),
+    ("红线·一辈子", '　他说要陪她一辈子。', True, 6, True),
+    ("红线·到死", '　他说这个账记到死。', True, 6, True),
+    ("红线·署名首字母 L", '　盒底刻着一个字母 L。', True, 6, True),
+    ("红线·夏父", '　夏父把碗放下。', True, 6, True),
+    ("放行·L 在单词里", '　盒底写着 LED 四个字。', False, 6, True),
+    ("放行·干净句", '　她把信照原来的折痕折回去。', False, 6, True),
+    ("放行·A 线不查红线", '　「永远」两个字刻在铜背上。', False, 6, False),
+    ("放行·ch3 不追溯", '　他永远记得那天。', False, 3, True),
 ]
 
 
@@ -137,6 +154,12 @@ def run_suite(verbose=True):
         hits = sr.span_mentions(body)
         check(name, bool(hits) == expect, f"实际命中={hits}")
 
+    if verbose:
+        print("=== B 线红线（ch4 起：署名语汇 / 首字母 L / 禁用称谓）===")
+    for name, body, expect, chap, is_b in B_REDLINE_CASES:
+        hits = br.redline_hits(body, chapter=chap, is_b=is_b)
+        check(name, bool(hits) == expect, f"实际命中={hits}")
+
     return failed
 
 
@@ -151,6 +174,9 @@ def prove_can_fail():
     print("=== 证明用例「能失败」（Mico 2026-11-12 10:47 钉）===")
     original_theme = tr.THEME_PATTERNS
     original_span = sr._SPAN_PATTERNS
+    original_words = br.REDLINE_WORDS
+    original_letter = br.LETTER_L
+    original_kinship = br.FORBIDDEN_KINSHIP
     ok = True
     try:
         tr.THEME_PATTERNS = BROKEN_THEME
@@ -179,9 +205,25 @@ def prove_can_fail():
             ok = False
         else:
             print(f"  [OK  ] 用例会变红（如：{failed3[0]}）——证明年龄放行用例真在检验")
+
+        # R48（2026-11-13）：B 线红线判据从未进仓库侧 → 只查「永远」的旧版判据，
+        # 漏掉 L／永不／一辈子／到死／夏父。换上它，整套必须变红。
+        br.REDLINE_WORDS = br.BROKEN_WORDS
+        br.LETTER_L = br.BROKEN_LETTER
+        br.FORBIDDEN_KINSHIP = br.BROKEN_KINSHIP
+        failed4 = run_suite(verbose=False)
+        print(f"  旧判据（R48 只查「永远」）下失败用例数：{len(failed4)}")
+        if not failed4:
+            print("  [FAIL] 换成 R48 的坏判据后用例仍全绿 → 红线用例是摆设！")
+            ok = False
+        else:
+            print(f"  [OK  ] 用例会变红（如：{failed4[0]}）——证明红线用例真在检验")
     finally:
         tr.THEME_PATTERNS = original_theme
         sr._SPAN_PATTERNS = original_span
+        br.REDLINE_WORDS = original_words
+        br.LETTER_L = original_letter
+        br.FORBIDDEN_KINSHIP = original_kinship
     return 0 if ok else 1
 
 

@@ -27,6 +27,7 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import theme_rules as tr  # noqa: E402  —— 主题句门禁（归一化匹配 + 章号分级）
 import span_rules as sr  # noqa: E402  —— 年数跨度门禁（rule 4：只拦「三十年」式推算）
+import bline_rules as br  # noqa: E402  —— B 线红线门禁（ch4 起：署名语汇 / 首字母 L / 禁用称谓）
 
 HANZI = re.compile(r"[\u4e00-\u9fff]")
 YEAR = re.compile(r"\b(?:19|20)\d{2}\b")
@@ -109,6 +110,11 @@ def check_file(path):
             hits = [w for w in B_FORBIDDEN if w in body]
             if hits:
                 errors.append(f"{title}: B 线出现禁用现代物件 {hits}")
+            # B 线红线（2026-11-13 补洞）：Mico 那侧的切片级验收脚本已查，
+            # 仓库侧此前**一条都没查** → 切片级守住的东西到章级／评审阶段就没人守。
+            rl = br.redline_hits(body, chapter=chapter, is_b=True)
+            if rl:
+                errors.append(f"{title}: B 线红线破线 {rl}")
             whits = [w for w in B_WARN if w in body]
             if whits:
                 warns.append(f"{title}: B 线出现需确认年代感的物件 {whits}")
