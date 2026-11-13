@@ -27,13 +27,47 @@ ORDER="A1 B1 A2 B2 A3 B3"
 cd "$REPO" 2>/dev/null || { echo "🔴 ch6 验收失败：进不了项目仓 $REPO"; exit 0; }
 
 TODAY="$(TZ=Asia/Tokyo date +%F)"
+YESTERDAY="$(TZ=Asia/Tokyo date -v-1d +%F)"
 NOW_HM="$(TZ=Asia/Tokyo date +%H%M)"
 
-# 21:30 交付槽尚未触发时（<21:45），当日「0 commit」是常态，不是漏跑 → 不判不补
-if [ "$NOW_HM" -lt 2145 ]; then
+# ⚠️ R50（2026-11-14 01:09，Mico 验收脚本先撞上同型 bug）：**证据窗口按「切片槽日」算，不按「脚本运行日」算**。
+#    旧逻辑把「当日」＝脚本运行当天：验收一旦跨过午夜（01:09 补验 21:30 那场），
+#    日历当天自然没有当日 commit → 假 FAIL／假漏跑；反过来，若 22:05 验收槽被宿主拖到 00:0x，
+#    旧逻辑直接 `<2145` 早退 NO_REPLY → **那晚的验收静默消失**（既不判也不补）。
+#    现口径：**SLOT_DATE = 最近一个已过去的 21:30 槽所在的日期**
+#      · 21:45 之后运行 → 槽＝今天
+#      · 00:00–03:00 运行 → 槽＝昨天（跨日补验／验收槽被拖过午夜）
+#      · 03:00–21:44 运行 → 不在验收窗口内 → NO_REPLY（不判不补，防白天误触发）
+#    证据一律取 SLOT_DATE 当天（日历日）而不是脚本运行日。
+SLOT_DATE_OVERRIDE="${SLOT_DATE_OVERRIDE:-}"
+if [ -n "$SLOT_DATE_OVERRIDE" ]; then
+  SLOT_DATE="$SLOT_DATE_OVERRIDE"; IN_WINDOW=1          # 测试用
+elif [ "$NOW_HM" -ge 2145 ]; then
+  SLOT_DATE="$TODAY"; IN_WINDOW=1                         # 正常窗口：21:45 之后
+elif [ "$NOW_HM" -le 0300 ]; then
+  SLOT_DATE="$YESTERDAY"; IN_WINDOW=1                     # 跨日补验：00:00–03:00
+else
+  SLOT_DATE="$YESTERDAY"; IN_WINDOW=0                     # 白天不在验收窗口
+fi
+
+if [ "$IN_WINDOW" -eq 0 ]; then
   echo "NO_REPLY"
   exit 0
 fi
+# 证据窗口：**槽日 00:00 → 次日 03:00**（含跨日补跑窗口）——不能只用 --since，
+# 否则更晚日期的 commit 会把「那一夜其实没交」掩盖掉（这正是本次要堵的洞）。
+# BSD date 的 -f/-v 组合会吞掉输出格式（实测得到 "Fri Nov 13 01:10 JST"）→ 改用 python 算窗口。
+eval "$(python3 - "$SLOT_DATE" <<'PYEOF'
+import datetime, sys
+d = datetime.date.fromisoformat(sys.argv[1])
+start = datetime.datetime.combine(d, datetime.time(0, 0, 0))
+end = start + datetime.timedelta(days=1, hours=3)
+print(f"SLOT_START='{start:%Y-%m-%d %H:%M:%S}'")
+print(f"SLOT_END='{end:%Y-%m-%d %H:%M:%S}'")
+print(f"SLOT_NEXT='{(d + datetime.timedelta(days=1)):%Y-%m-%d}'")
+PYEOF
+)"
+echo "[ch6-verify] 运行时刻 $TODAY $NOW_HM · 校验槽日 SLOT_DATE=$SLOT_DATE · 证据窗口 $SLOT_START → $SLOT_END" >> /tmp/ch6-verify-last.log
 
 NEXT=""
 for s in $ORDER; do
@@ -55,10 +89,15 @@ if i >= 0:
         d = json.loads(raw[i:])
     except Exception:
         d = {}
-    today = '$TODAY'
+    slot = '$SLOT_DATE'
+    slot_next = '$SLOT_NEXT'
     for e in d.get('entries', []):
         r = str(e.get('runAtIso') or '')
-        if not r.startswith(today):
+        # 槽日当天，或跨日补跑窗口内（次日 03:00 之前）
+        in_win = r.startswith(slot)
+        if r.startswith(slot_next) and len(r) >= 13 and r[11:13] <= '03':
+            in_win = True
+        if not in_win:
             continue
         if e.get('status') == 'ok':
             ok += 1
@@ -68,21 +107,22 @@ print(ok, bad)
 " 2>/dev/null || echo "0 0"
 }
 
-COMMITS=$(git log --since="$TODAY 00:00" --pretty=%s 2>/dev/null | grep -c "ch6 .*切片")
+COMMITS=$(git log --since="$SLOT_START" --until="$SLOT_END" --pretty=%s 2>/dev/null | grep -c "ch6 .*切片")
 read -r RUNS_OK RUNS_BAD <<<"$(count_runs)"
 
 # 当日已有切片 commit → 正常
 if [ "$COMMITS" -ge 1 ]; then echo "NO_REPLY"; exit 0; fi
+echo "[ch6-verify] SLOT_DATE=$SLOT_DATE 槽日已有切片 commit ${COMMITS} 条 → 正常" >> /tmp/ch6-verify-last.log
 
 # 当日有**成功**条目 → 槽跑过了却 0 commit → 只告警，不自动重跑（防重复交付）
 if [ "${RUNS_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch6 切片异常（$TODAY）：cron 有当日成功条目但 0 commit，下一场应是 $NEXT。→ 选片规则/限流/提交失败问题，需人工查；不要重复提交已存在的切片。"
+  echo "🔴 ch6 切片异常（槽日 $SLOT_DATE）：cron 有当日成功条目但 0 commit，下一场应是 $NEXT。→ 选片规则/限流/提交失败问题，需人工查；不要重复提交已存在的切片。"
   exit 0
 fi
 
 # 下一场文件已存在却没 commit → 上一轮还在写或提交失败，不自动重跑（避免同夜双交）
 if [ -f "manuscripts/ch6-$NEXT.md" ]; then
-  echo "🟡 ch6 切片待提交（$TODAY）：manuscripts/ch6-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
+  echo "🟡 ch6 切片待提交（槽日 $SLOT_DATE）：manuscripts/ch6-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
   exit 0
 fi
 
@@ -94,7 +134,7 @@ else
 fi
 
 if [ "${DRY_RUN:-0}" = "1" ]; then
-  echo "[DRY_RUN] $TODAY：git 0 commit + $SLOT_STATE + 下一场 $NEXT 文件不存在 → 判定为宿主进程级漏跑，实际执行会立刻补跑 $JOB。"
+  echo "[DRY_RUN] 槽日 $SLOT_DATE：git 0 commit + $SLOT_STATE + 下一场 $NEXT 文件不存在 → 判定为宿主进程级漏跑，实际执行会立刻补跑 $JOB。"
   exit 0
 fi
 
@@ -102,8 +142,8 @@ fi
 sleep 10
 read -r RUNS2_OK RUNS2_BAD <<<"$(count_runs)"
 if [ "${RUNS2_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch6 切片漏跑（$TODAY）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），下一场 = $NEXT。"
+  echo "🔴 ch6 切片漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），下一场 = $NEXT。"
 else
-  echo "🔴 ch6 切片漏跑（$TODAY）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。下一场 = $NEXT。"
+  echo "🔴 ch6 切片漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。下一场 = $NEXT。"
 fi
 exit 0
