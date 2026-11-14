@@ -29,6 +29,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import theme_rules as tr  # noqa: E402
 import span_rules as sr  # noqa: E402
 import bline_rules as br  # noqa: E402
+import line_rules as lr  # noqa: E402
 
 # ── 主题句用例（negative case：喂必然违规的句子，断言「必须命中」）───────────
 # 前 6 条＝已交付写法回归；后 12 条＝**攻击用**（最容易漏的写法）。
@@ -100,6 +101,26 @@ B_REDLINE_CASES = [
 ]
 
 
+# ── 线级合计用例（2026-11-14 新增；仓库侧硬闸）──────────────────────────────
+# 结构：(名称, [(场景标签, 正文汉字数)], 章号, 期望是否报错)
+# 这些场景是**构造出来的算术**，不是目测：例如 ch6 齐章 A ＝ 1,595＋1,598＋900
+# ＝ 4,093 ＜ 4,100 → 必须报错；若判据坏了（不判线级），这条用例会变绿 → 整套失守。
+LINE_TOTAL_CASES = [
+    ("齐章·A 线不足 4,100", [("A1", 1595), ("A2", 1598), ("A3", 900),
+                             ("B1", 1488), ("B2", 1434), ("B3", 1434)], "ch6", True),
+    ("齐章·B 线不足 4,300", [("A1", 1595), ("A2", 1598), ("A3", 1300),
+                             ("B1", 1488), ("B2", 1400), ("B3", 1400)], "ch6", True),
+    ("齐章·双线全过", [("A1", 1595), ("A2", 1598), ("A3", 1300),
+                       ("B1", 1488), ("B2", 1434), ("B3", 1434)], "ch6", False),
+    ("未齐章·缺口由剩余场次承担", [("A1", 1595), ("A2", 1598), ("B1", 1488)], "ch6", False),
+    ("齐章·全章合计不足（自定义下限）",
+     [("A1", 1595), ("A2", 1598), ("A3", 1300),
+      ("B1", 1488), ("B2", 1434), ("B3", 1434)], "ch6", True),
+    ("ch3 旧章口径 4,000/4,000/8,000", [("A1", 1300), ("A2", 1300), ("A3", 1400),
+                                        ("B1", 1300), ("B2", 1300), ("B3", 1400)], "ch3", False),
+]
+
+
 def run_suite(verbose=True):
     """跑全套用例，返回失败用例名列表。"""
     failed = []
@@ -160,6 +181,27 @@ def run_suite(verbose=True):
         hits = br.redline_hits(body, chapter=chap, is_b=is_b)
         check(name, bool(hits) == expect, f"实际命中={hits}")
 
+    if verbose:
+        print("=== 线级合计（A ≥ / B ≥ / 全章 ≥；仓库侧硬闸）===")
+    for name, scenes, chap, expect_err in LINE_TOTAL_CASES:
+        floors = lr.FLOORS
+        if name.startswith("齐章·全章合计不足"):
+            # 自定义下限：把全章门槛抬到 9,000 → 同一批场景应报错（证明总闸真的会响）
+            # **用字面量而不是 lr.FLOORS** —— --prove 时 lr.FLOORS 会被换成坏判据，
+            # 这里若依赖它就会 KeyError 崩掉（崩掉不算「变红」，不算证据）。
+            floors = {"ch6": {"a": 4100, "b": 4300, "total": 9000},
+                      "ch3": {"a": 4000, "b": 4000, "total": 8000}}
+        res = lr.analyze(scenes, chap, floors=floors)
+        check(name, bool(res["errors"]) == expect_err,
+              f"errors={res['errors']}")
+        if expect_err:
+            check(name + "（有具体报错文本）", any("线合计" in e or "全章合计" in e for e in res["errors"]),
+                  f"errors={res['errors']}")
+        else:
+            check(name + "（缺口写进 info 而非 error）",
+                  any("还差" in i or "已达底线" in i for i in res["info"]),
+                  f"info={res['info']}")
+
     return failed
 
 
@@ -177,6 +219,8 @@ def prove_can_fail():
     original_words = br.REDLINE_WORDS
     original_letter = br.LETTER_L
     original_kinship = br.FORBIDDEN_KINSHIP
+    original_floors = lr.FLOORS
+    original_bands = lr.PER_SCENE
     ok = True
     try:
         tr.THEME_PATTERNS = BROKEN_THEME
@@ -218,12 +262,26 @@ def prove_can_fail():
             ok = False
         else:
             print(f"  [OK  ] 用例会变红（如：{failed4[0]}）——证明红线用例真在检验")
+
+        # R51（2026-11-14）：线级合计判据此前**只活在 Mico 那侧的验收脚本里**，
+        # 仓库侧一条都没判。换上「无线级口径」的坏判据 → 整套必须变红。
+        lr.FLOORS = lr.BROKEN_FLOORS
+        lr.PER_SCENE = lr.BROKEN_PER_SCENE
+        failed5 = run_suite(verbose=False)
+        print(f"  旧判据（R51 不判线级合计）下失败用例数：{len(failed5)}")
+        if not failed5:
+            print("  [FAIL] 换成 R51 的坏判据后用例仍全绿 → 线级用例是摆设！")
+            ok = False
+        else:
+            print(f"  [OK  ] 用例会变红（如：{failed5[0]}）——证明线级用例真在检验")
     finally:
         tr.THEME_PATTERNS = original_theme
         sr._SPAN_PATTERNS = original_span
         br.REDLINE_WORDS = original_words
         br.LETTER_L = original_letter
         br.FORBIDDEN_KINSHIP = original_kinship
+        lr.FLOORS = original_floors
+        lr.PER_SCENE = original_bands
     return 0 if ok else 1
 
 
