@@ -83,8 +83,16 @@ def main():
         print(f"  [WARN] {w}")
     for e in res["errors"]:
         print(f"  [ERROR] {e}")
+    missing = res.get("missing") or []
     if not res["errors"]:
-        print("  [OK  ] 线级合计闸门通过")
+        if missing:
+            # R53（2026-11-15）：未齐章时不得打「通过」——那正是 20:00 巡逻误读的那类绿字
+            print(
+                f"  [PENDING] 线级闸门**尚未判定**（缺 {('、'.join(missing))}，"
+                f"只报了缺口与缺口承担场；齐章后再判全章合计）"
+            )
+        else:
+            print("  [OK  ] 线级合计闸门通过")
     print(f"\n合计 ERROR {len(res['errors'])} 项")
     return 1 if res["errors"] else 0
 

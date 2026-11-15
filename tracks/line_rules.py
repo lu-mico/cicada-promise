@@ -109,7 +109,7 @@ def analyze(scenes, chapter, floors=None, per_scene=None, rosters=None):
             f"{chapter}: 仓库侧无线级口径 → 只报数不判闸"
             f"（实际 A {totals['A']}／B {totals['B']}／全章 {total}）"
         )
-        return {"errors": errors, "warns": warns, "info": info}
+        return {"errors": errors, "warns": warns, "info": info, "missing": []}
 
     roster = rosters.get(chapter, [])
     missing = [s for s in roster if s not in present]
@@ -144,4 +144,4 @@ def analyze(scenes, chapter, floors=None, per_scene=None, rosters=None):
             f"尚未齐章（缺 {('、'.join(missing))}）→ 全章合计闸门待六场齐后判定"
         )
 
-    return {"errors": errors, "warns": warns, "info": info}
+    return {"errors": errors, "warns": warns, "info": info, "missing": missing}
