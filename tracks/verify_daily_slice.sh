@@ -74,8 +74,38 @@ for s in $ORDER; do
   if [ ! -f "manuscripts/ch6-$s.md" ]; then NEXT="$s"; break; fi
 done
 
-# 六场齐 → 本章切片已完稿
-if [ -z "$NEXT" ]; then echo "NO_REPLY"; exit 0; fi
+# ── 期望工作判定（2026-11-18 扩充：切片期 → 章级阶段期）────────────────────
+# 切片期：下一场切片文件不存在 → 今晚该交一场切片（commit 标题含「ch6 …切片」）
+# 章级期（六场齐，2026-11-17 B3 之后进入）：改判阶段 ——
+#   ① 阶段1 合成：manuscripts/ch6-sample.md 未生成
+#   ② 阶段2 去 AI 味：tracks/ch6-deslop-report.md 未生成
+#   ③ 阶段3 四视角评审 + v1.0：尚无 ch6 v1.0 定稿 commit
+#   ④ 本章已定稿（v1.0 commit 在 git log 里）→ 无待办 → 静默（等主编切 ch7 轨道）
+# ⚠️ 2026-11-18 之前本脚本在六场齐时一律 NO_REPLY → 切到章级轨道后，
+#    21:30 槽若被宿主掐掉／空跑，22:05 槽**看不见**（切片已齐 → 直接静默）→ 纪律失去可执行轨道。
+EXPECT=""
+# commit 判据分两种形态，**取并集**：
+#   切片期：「ch6 [AB][0-9] 切片」（如「Yomi: ch6 B3 切片 — …」）
+#   章级期：「ch6 阶段N …」／「ch6 v1.0 …」／「tracks(ch6): chapter review|deslop …」
+# ⚠️ **不能用宽口径「ch6」**：同日的**轨道维护类 commit**（如「tracks(ch6): R54 入档 …」）
+#    会被误当成阶段 commit → 22:05 槽看不见「今晚阶段没交」→ 又一次假绿（R53 同族）。
+SLICE_COMMIT_RE="ch6 [AB][0-9] 切片"
+STAGE_COMMIT_RE="ch6 (阶段[0-9]|v1\.0)|tracks\(ch6\): (chapter review|deslop)"
+COMMIT_RE="$SLICE_COMMIT_RE|$STAGE_COMMIT_RE"
+if [ -z "$NEXT" ]; then
+  if git log --pretty=%s 2>/dev/null | grep -q "ch6 v1.0"; then
+    echo "NO_REPLY"; exit 0
+  fi
+  if [ ! -f "manuscripts/ch6-sample.md" ]; then
+    EXPECT="阶段1 合成（manuscripts/ch6-sample.md 未生成）"
+  elif [ ! -f "tracks/ch6-deslop-report.md" ]; then
+    EXPECT="阶段2 去 AI 味（tracks/ch6-deslop-report.md 未生成）"
+  else
+    EXPECT="阶段3 四视角评审 + v1.0（尚无 ch6 v1.0 定稿 commit）"
+  fi
+else
+  EXPECT="切片 $NEXT"
+fi
 
 # 统计当日 cron runs 条目：**成功条目 / 被掐条目**（R42：error 不算「跑过」）
 count_runs() {
@@ -107,22 +137,22 @@ print(ok, bad)
 " 2>/dev/null || echo "0 0"
 }
 
-COMMITS=$(git log --since="$SLOT_START" --until="$SLOT_END" --pretty=%s 2>/dev/null | grep -c "ch6 .*切片")
+COMMITS=$(git log --since="$SLOT_START" --until="$SLOT_END" --pretty=%s 2>/dev/null | grep -cE "$COMMIT_RE")
 read -r RUNS_OK RUNS_BAD <<<"$(count_runs)"
 
 # 当日已有切片 commit → 正常
 if [ "$COMMITS" -ge 1 ]; then echo "NO_REPLY"; exit 0; fi
-echo "[ch6-verify] SLOT_DATE=$SLOT_DATE 槽日已有切片 commit ${COMMITS} 条 → 正常" >> /tmp/ch6-verify-last.log
+echo "[ch6-verify] SLOT_DATE=$SLOT_DATE 槽日已有 commit ${COMMITS} 条（期望：$EXPECT）→ 正常" >> /tmp/ch6-verify-last.log
 
 # 当日有**成功**条目 → 槽跑过了却 0 commit → 只告警，不自动重跑（防重复交付）
 if [ "${RUNS_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch6 切片异常（槽日 $SLOT_DATE）：cron 有当日成功条目但 0 commit，下一场应是 $NEXT。→ 选片规则/限流/提交失败问题，需人工查；不要重复提交已存在的切片。"
+  echo "🔴 ch6 异常（槽日 $SLOT_DATE）：cron 有当日成功条目但 0 commit，今晚该做的是「$EXPECT」。→ 产出/提交失败问题，需人工查；不要重复提交已存在的稿件。"
   exit 0
 fi
 
 # 下一场文件已存在却没 commit → 上一轮还在写或提交失败，不自动重跑（避免同夜双交）
 if [ -f "manuscripts/ch6-$NEXT.md" ]; then
-  echo "🟡 ch6 切片待提交（槽日 $SLOT_DATE）：manuscripts/ch6-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
+  echo "🟡 ch6 待提交（槽日 $SLOT_DATE）：manuscripts/ch6-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
   exit 0
 fi
 
@@ -134,7 +164,7 @@ else
 fi
 
 if [ "${DRY_RUN:-0}" = "1" ]; then
-  echo "[DRY_RUN] 槽日 $SLOT_DATE：git 0 commit + $SLOT_STATE + 下一场 $NEXT 文件不存在 → 判定为宿主进程级漏跑，实际执行会立刻补跑 $JOB。"
+  echo "[DRY_RUN] 槽日 $SLOT_DATE：git 0 commit + $SLOT_STATE + 今晚该做的是「$EXPECT」→ 判定为宿主进程级漏跑，实际执行会立刻补跑 $JOB。"
   exit 0
 fi
 
@@ -142,8 +172,8 @@ fi
 sleep 10
 read -r RUNS2_OK RUNS2_BAD <<<"$(count_runs)"
 if [ "${RUNS2_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch6 切片漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），下一场 = $NEXT。"
+  echo "🔴 ch6 漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），今晚该做的是「$EXPECT」。"
 else
-  echo "🔴 ch6 切片漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。下一场 = $NEXT。"
+  echo "🔴 ch6 漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。今晚该做的是「$EXPECT」。"
 fi
 exit 0
