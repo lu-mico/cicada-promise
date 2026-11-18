@@ -110,6 +110,14 @@
 
 **阶段 2｜去 AI 味（deslop）——待跑**
 - 机器清单 → **改切片原件** → 重合成 → 复扫（**必须在本项目目录就地跑**，白名单在 `manuscripts/.deslop-whitelist`）。
+- 📌 **归属实测（2026-11-18 00:5x，主编仓库侧脚本跑）＝ blocking 3 条**（A1／B1／B2 各 1；A2／A3／B3 ＝ 0）。命令：`python3 tracks/deslop_scan.py --chapter ch6`（新增脚本：正文段口径 + 项目目录就地跑 detector + **行号回映射到原切片文件**）。
+  | 场 | blocking | 原文件行号 | 句子 | 类型 |
+  |----|----------|------------|------|------|
+  | A1 | 1 | L93 | 「这两个字没有日期，没有签名，也没有说明缓到什么时候。」 | `negation-parade` |
+  | B1 | 1 | L49 | 「不是疼，是忽然没了力气，膝盖先弯下去。」 | `not-is-comparison` |
+  | B2 | 1 | L85 | 「不是不能。是张开嘴，声音出不来，也懒得去拽。」 | `not-is-comparison` |
+  - advisory：A1 2（L45 `quote-emphasis-tic`、L93 `negation-pair-tic`）· A2 2（L13 `low-connective-density-tic`、L79 `quote-emphasis-tic`）· A3 2（L13 `low-connective-density-tic`、L41 `quote-emphasis-tic`）· B2 1（L17 `micro-action-tic`）· B3 1（L57 `micro-action-tic`）· B1 0。
+  - ⚠️ **口头清单两版都错过 B1**（Mico 11-18 00:09 说「A1+B2」；00:40 说「A1+B3、B2=0」）——**仓库账本一直是对的**（本文件 §六 与 `tracks/ch6-daily.md` §二 从 11/14 起记的就是 A1／B1／B2）。**归属以仓库实测为准，不以任何一版口头清单为准**（R49：交割类备注写之前必须回源文件逐字核对象）。
 - 📌 **切片级已记账、待阶段 2 统一处置**（按 ch5 先例：切片级只记账，不当场改，不阻塞本场）：
   - A1 `negation-parade`（L93「这两个字没有日期，没有签名，也没有说明缓到什么时候。」）——Mico 2026-11-12 22:09 切片级验收时标出。
   - B1 `not-is-comparison`（L49）——仓库侧 detector 2026-11-14 就地跑实测。
