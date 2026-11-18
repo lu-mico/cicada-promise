@@ -1,4 +1,4 @@
-# 写作说明（评审参考）
+## 写作说明（评审参考）
 
 > 本文件为 `tracks/ch6-notes.md`，由 `tracks/compose.py --chapter ch6` 合入 `manuscripts/ch6-sample.md` 末尾。
 > 章节级判据见 [tracks/ch3-done.md](../tracks/ch3-done.md)（字数口径唯一定义在 §四）。
@@ -105,24 +105,32 @@
 - `tracks/verify_factsource.py`：事实源单向核对（只读比对，退出码 0 才算过）。
 - 21:30 切片 cron（`be2b1e10`）与 22:05 验收脚本（`9f6e770e` → `tracks/verify_daily_slice.sh`）同批切到 ch6。
 
-**阶段 1｜合成 + 回填——待跑**
+**阶段 1｜合成 + 回填——已跑（2026-11-18 20:1x）**
 - 六场切片齐 → `python3 tracks/compose.py --chapter ch6` → `python3 tracks/check.py manuscripts/ch6-sample.md`（ERROR 0／退出码 0）→ 本文件 §一／§四／§五回填。
+- 📌 **线级实测（`tracks/check_line_totals.py --chapter ch6`）**：A 4,812／B 4,504／全章 9,316（底线 A 4,100／B 4,300／全章 8,400）→ **三线全过**。
+- ⚠️ **R56（2026-11-18 20:1x，主编当场踩中并修）：notes 文件首行标题层级会让末场的正文段口径失真。**
+  本文件第 1 行原为 `# 写作说明（评审参考）`（**H1**），而 ch3／ch4／ch5 的 notes 首行都是 `## 写作说明（评审参考）`（**H2**）。
+  `tracks/check.py` 的正文段结束标记是 `^##\s*(写作说明|下一切片|…)` → **H1 匹配不上** → 整份章级写作说明被当成**末场（B3）的正文**算进去：
+  首跑合成稿时 B3 报「正文汉字 5,198」，并凭空爆出 4 项 ERROR（年数跨度 ×3／B 线年份 1979·1996·2026／B 线红线「永远」×4·「永不」×2·「一辈子」×2·「到死」×2·「L」×17／林默主题句）——**全部来自 notes 区，不是正文**。
+  **已修**：本文件首行改回 `## 写作说明（评审参考）`（与 ch3／ch4／ch5 对齐）；重合成后 B3 ＝ **1,441** 字，ERROR 0／退出码 0。
+  **新铁律（R56）**：① **notes 文件首行必须是 H2**（`## 写作说明（评审参考）`），与 compose.py／check.py 的正文段口径同层；② **末场字数异常偏大**（ch6 侧 5,198 vs 他场 1,4xx–1,6xx）＝ notes 区被吞的典型信号，先查 notes 首行层级，再查正文；③ 章级写作说明是**章事实记录**，但它一旦落在正文段内就会污染 B 线红线／年份／主题句三道门禁——**口径事故会伪装成剧情事故**，先查口径再谈改稿。
 
-**阶段 2｜去 AI 味（deslop）——待跑**
+**阶段 2｜去 AI 味（deslop）——已完成（2026-11-18 20:1x）**
 - 机器清单 → **改切片原件** → 重合成 → 复扫（**必须在本项目目录就地跑**，白名单在 `manuscripts/.deslop-whitelist`）。
 - 📌 **归属实测（2026-11-18 00:5x，主编仓库侧脚本跑）＝ blocking 3 条**（A1／B1／B2 各 1；A2／A3／B3 ＝ 0）。命令：`python3 tracks/deslop_scan.py --chapter ch6`（新增脚本：正文段口径 + 项目目录就地跑 detector + **行号回映射到原切片文件**）。
-  | 场 | blocking | 原文件行号 | 句子 | 类型 |
-  |----|----------|------------|------|------|
-  | A1 | 1 | L93 | 「这两个字没有日期，没有签名，也没有说明缓到什么时候。」 | `negation-parade` |
-  | B1 | 1 | L49 | 「不是疼，是忽然没了力气，膝盖先弯下去。」 | `not-is-comparison` |
-  | B2 | 1 | L85 | 「不是不能。是张开嘴，声音出不来，也懒得去拽。」 | `not-is-comparison` |
-  - advisory：A1 2（L45 `quote-emphasis-tic`、L93 `negation-pair-tic`）· A2 2（L13 `low-connective-density-tic`、L79 `quote-emphasis-tic`）· A3 2（L13 `low-connective-density-tic`、L41 `quote-emphasis-tic`）· B2 1（L17 `micro-action-tic`）· B3 1（L57 `micro-action-tic`）· B1 0。
-  - ⚠️ **口头清单两版都错过 B1**（Mico 11-18 00:09 说「A1+B2」；00:40 说「A1+B3、B2=0」）——**仓库账本一直是对的**（本文件 §六 与 `tracks/ch6-daily.md` §二 从 11/14 起记的就是 A1／B1／B2）。**归属以仓库实测为准，不以任何一版口头清单为准**（R49：交割类备注写之前必须回源文件逐字核对象）。
-- 📌 **切片级已记账、待阶段 2 统一处置**（按 ch5 先例：切片级只记账，不当场改，不阻塞本场）：
-  - A1 `negation-parade`（L93「这两个字没有日期，没有签名，也没有说明缓到什么时候。」）——Mico 2026-11-12 22:09 切片级验收时标出。
-  - B1 `not-is-comparison`（L49）——仓库侧 detector 2026-11-14 就地跑实测。
-  - B1 折痕道数一处（P3，不阻塞）：正文 §六写纸上有四道折痕，与「折成四方」这一折叠次数对不上（对折两次出三道）；stage 2 改一处措辞即可，不动剧情。
-  - A2 `blocking 0`（advisory 2：L13 `low-connective-density-tic`、L79 `quote-emphasis-tic`）→ 归章级阶段 2，不阻塞切片。
+  | 场 | blocking 类型 | 原文件行号 | 改后写法（改后全文见 `tracks/ch6-deslop-report.md`） | 改后行号 |
+  |----|--------------|------------|---------------------------------------|----------|
+  | A1 | `negation-parade` | L93 | 否定三项排比压成一句：写“缓办”的那一栏，日期、签名、缓到什么时候，一样也没写。 | L93 |
+  | B1 | `not-is-comparison` | L49 | 否定铺垫改成口语否定：疼倒不疼，就是忽然没了力气，膝盖先弯下去。 | L49 |
+  | B2 | `not-is-comparison` | L85 | 否定铺垫改成正面句：嘴能张开，声音出不来，也懒得去拽。 | L85 |
+  - advisory（阶段 2 前）：A1 2（L45 `quote-emphasis-tic`、L93 `negation-pair-tic`）· A2 2（L13 `low-connective-density-tic`、L79 `quote-emphasis-tic`）· A3 2（L13 `low-connective-density-tic`、L41 `quote-emphasis-tic`）· B2 1（L17 `micro-action-tic`）· B3 1（L57 `micro-action-tic`）· B1 0。
+  - ⚠️ **口头清单两版都错过 B1**（Mico 11-18 00:09 说「A1+B2」；00:40 说「A1+B3、B2=0」）——**仓库账本一直是对的**（本文件 §六 与 `tracks/ch6-daily.md` §二 从 11/14 起记的就是 A1／B1／B2）。**归属以仓库实测为准，不以任何一版口头清单为准**（R49：交割类备注写之前必须回源文件逐字核对象；R55：机器脚本已落仓 `tracks/deslop_scan.py`）。
+- 📌 **切片级记账项的阶段 2 处置（逐条销账）**：
+  - A1 `negation-parade`（L93）——Mico 2026-11-12 22:09 切片级验收时标出 → **已改**（见上表）。
+  - B1 `not-is-comparison`（L49）——仓库侧 detector 2026-11-14 就地跑实测 → **已改**（见上表）。
+  - B1 折痕道数一处（P3，不阻塞）：正文 §六原写纸上有四道折痕，与「折成四方」这一折叠次数对不上（对折两次出三道）→ **已改**（四道 → 三道，只改措辞、不动剧情）。
+  - A2 `blocking 0`（advisory 2：L13 `low-connective-density-tic`、L79 `quote-emphasis-tic`）→ 归章级阶段 2，不阻塞切片 → **保留**（功能性写法，见处置报告 §四）。
+- 📌 **阶段 2 收尾复扫（改后）**：切片逐场 `deslop_scan.py --chapter ch6` ＝ **blocking 0**；合成稿正文段（6 段）`check-ai-patterns.js` **blocking 0**、`check-degeneration.js` **blocking 0**；`check.py` ERROR 0／退出码 0；线级闸门 ERROR 0；主题句门禁通过；事实源三不变式 True；门禁自测全过；ch1–ch5 回归 ERROR 0。处置报告：`tracks/ch6-deslop-report.md`。
 
 **阶段 1 的切片交付进度（逐场记，来源＝tracks/ch6-daily.md §二）**
 | 场 | commit | 交付 | 切片级验收 |
