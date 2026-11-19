@@ -73,7 +73,7 @@ def gate(repo, baseline=DEFAULT_BASELINE, verbose=True):
     # 3) 没人碰过 ch5 文件
     _, out, _ = git(repo, "log", "--oneline", f"{baseline}..HEAD", "--", PATTERN)
     if out:
-        bad.append(f"有人碰过 ch5 文件（内容即便一致也不算通过）：\n{out}")
+        bad.append(f"有人碰过 ch5 文件（**改了又改回也算碰过** —— 这种 diff 看不出来）：\n{out}")
 
     # 4) 工作树里没有未提交的 ch5 改动
     _, out, _ = git(repo, "status", "--porcelain", "--", PATTERN)
