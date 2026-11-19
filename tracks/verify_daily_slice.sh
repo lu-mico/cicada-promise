@@ -157,7 +157,7 @@ echo "[ch6-verify] SLOT_DATE=$SLOT_DATE 槽日已有 commit ${COMMITS} 条（期
 # 「评审已落」态（2026-11-20 Mico 补）：21:30 槽按⑤并行锁**故意不产 commit** →
 #   当晚 0 commit 属预期 → **不报🔴、也不自动补跑**（补跑只会再报一次「阶段 3 进行中」）。
 if [ "$REVIEW_DONE" = "1" ]; then
-  echo "ℹ️ ch6（槽日 $SLOT_DATE）：阶段 3 已落（评审报告在仓）→ 21:30 槽按⑤并行锁不重复跑评审、当晚 0 commit 属预期，无需人工查。现在该做的是「$EXPECT」。"
+  echo "ℹ️ ch6（槽日 $SLOT_DATE）：阶段 3 已落（评审报告在仓）→ 21:30 槽按⑤并行锁不重复跑评审、当晚 0 commit 属预期，无需人工查。cron 当日成功条目 ${RUNS_OK:-0} 条（0 ＝ 宿主层压根没跑；但按⑤它本来也不该产 commit → 不补跑）。现在该做的是「$EXPECT」。"
   exit 0
 fi
 
