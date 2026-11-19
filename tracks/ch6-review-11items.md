@@ -57,7 +57,7 @@ git diff ch6-criteria-frozen..<sha> -- manuscripts/ | head -400
 |---|---|---|
 | A | `zsh tracks/ch6_review_chain.sh <新sha>` | **退出码 0**（EXITCODE=0） |
 | B | `grep -c "第二张是调解书上印的" manuscripts/ch6-A3.md` | **0**（旧半句必须消失） |
-| C | `grep -c "张扬亲笔手填" tracks/ch6-notes.md` ／ `grep -c "内勤（登记人）亲笔手填" tracks/ch6-notes.md` | **0** ／ **≥1** |
+| C | `grep -c "张扬亲笔手填" tracks/ch6-notes.md` → **0**；**归属按语义判**：案由栏那只手必须写成**「不是张扬」**（作者实际措辞：「这只手是「内勤／登记人」的，不是张扬、也不是父亲」；A3 写「同一个内勤填的两张表」）—— **不要卡字面串**（我原先写的期望串「内勤（登记人）亲笔手填」在作者稿里 0 命中＝假红，已废） | **0** ／ 归属≠张扬 |
 | D | `sed -n '/案由栏四个字/,/另一半/p' manuscripts/ch6-A2.md` | 口径两端并排看；**`A2:49-51` 两句必须逐字未改**（见下条禁区） |
 | E | `git diff --stat 699d02f..HEAD -- manuscripts/ tracks/ch6-notes.md` | **只动 `manuscripts/ch6-A3.md` ＋ `tracks/ch6-notes.md`**；出现 A3 以外的 manuscripts 文件＝超额改动，要报 |
 
