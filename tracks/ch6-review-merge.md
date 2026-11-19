@@ -118,6 +118,14 @@ python3 tracks/ch6_body_checks.py --prove   # 负向自测：证明判据「能�
 📌 落仓文件（2026-11-20 新增，**本补遗为唯一版本，另一边不落第二份**）：
 - `tracks/ch6_body_checks.py` —— 正文段口径门禁（item 7／8）＋ `--prove` 负向自测
 - `tracks/ch6_review_chain.sh` —— 全链（8 节：check／theme／line_totals／deslop／factsource／projection／ngram／重合成无 diff ＋ 正文段门禁）
+- `tracks/ch5_frozen_check.py` —— **item 5 后半「ch5 一个字未改」的机器判据**（基线 `e1ed9ef`＝ch5 v1.0 认可记录 commit，认可对象 `7abe232`）＋ `--prove` 负向自测
+
+📌 **item 5 后半原本没有机器判据（只有会话里口头讲）→ 已补（2026-11-20 06:3x）**：`tracks/ch5_frozen_check.py` 落仓后，链里第 [5] 节会跑：
+- `git diff --stat e1ed9ef..HEAD -- manuscripts/ch5-*.md` **空** → ch5 正文一字未改
+- `git log --oneline e1ed9ef..HEAD -- manuscripts/ch5-*.md` **空** → 没人碰过 ch5 文件（**「改了又改回」也算碰过**）
+- `git status --porcelain -- manuscripts/ch5-*.md` **空** → 工作树里没有未提交的 ch5 改动
+- 基线存在且是 HEAD 的祖先（历史被 rebase／reset 过 → 基线失效 → 直接判红）
+- 附带 **M4 落差起点提示**（advisory，不拦）：`manuscripts/ch5-A2.md:161`「附卷：治安，未结」↔ `manuscripts/ch6-A2.md:127`「结案。墨色比别处新」—— 落差**必须在 A3 兑现**，ch5 一字不动。
 
 📌 **已知基线（2026-11-20 06:13 复跑，改稿前状态）**：`check.py` ERROR 0 · `check_theme` 6×OK · `check_line_totals` A 4,812／B 4,504／全章 9,316（余 712／204／916）· `deslop` exit 0 · `verify_factsource` 三条 True · `projection` 地板 161,595／节奏 171,244.5（两个 WARN 不变）· **正文段口径全绿** · `compose` 重合成逐字节一致（manuscripts/ 无 diff）· **`ngram_scan --chapter ch6` 红：跨章硬门禁 2 命中**（A1 L139 跨 ch5 28 字盖核对章句 · A1 L141 跨 ch4 18 字经手栏句）—— 这两条正是改稿要消掉的，改稿没改到就还是红。
 ⚠️ **改稿前「全链红」是正常读数**（ngram 两条未消）—— 不要把红当违规，也不要因此跳过其余七节。

@@ -28,6 +28,13 @@ done
 
 if [ "$PROVE" = "1" ]; then
   python3 tracks/ch6_body_checks.py --prove
+  rc1=$?
+  echo ""
+  python3 tracks/ch5_frozen_check.py --prove
+  rc2=$?
+  echo ""
+  echo "=== 负向自测汇总：body_checks=$rc1 · ch5_frozen=$rc2 ==="
+  [ $rc1 -eq 0 ] && [ $rc2 -eq 0 ]
   exit $?
 fi
 
@@ -74,6 +81,13 @@ fi
 echo ""
 echo "--- [4] 正文段口径门禁（§八 item 7／8，判据落仓在 tracks/ch6_body_checks.py）---"
 python3 tracks/ch6_body_checks.py
+rc=$?
+echo "exit=$rc"
+if [ $rc -ne 0 ]; then FAIL=1; fi
+
+echo ""
+echo "--- [5] ch5 冻结门禁（§八 item 5 后半：ch5 一个字未改 —— 机器判据）---"
+python3 tracks/ch5_frozen_check.py
 rc=$?
 echo "exit=$rc"
 if [ $rc -ne 0 ]; then FAIL=1; fi
