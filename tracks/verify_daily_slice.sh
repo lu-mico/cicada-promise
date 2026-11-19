@@ -84,6 +84,13 @@ done
 # ⚠️ 2026-11-18 之前本脚本在六场齐时一律 NO_REPLY → 切到章级轨道后，
 #    21:30 槽若被宿主掐掉／空跑，22:05 槽**看不见**（切片已齐 → 直接静默）→ 纪律失去可执行轨道。
 EXPECT=""
+# 「评审已落」态（2026-11-20 Mico 补）
+#   阶段 3 的产物是 `tracks/ch6-review.md`；它已落仓、但 v1.0 定稿 commit 还没有时：
+#   21:30 槽按 prompt 的**⑤并行锁**「不重复跑评审、不重复改稿」→ **当晚 0 commit 是预期**，
+#   不是「产出/提交失败」。旧逻辑只认「有成功条目 + 0 commit = 🔴 异常」→ 每晚必误报，
+#   而且报出的 EXPECT 还写着「阶段3 四视角评审 + v1.0」→ **会把已经做完的阶段说成待做**，
+#   存在把「重复评审」重新勾起来的风险。
+REVIEW_DONE=0
 # commit 判据分两种形态，**取并集**：
 #   切片期：「ch6 [AB][0-9] 切片」（如「Yomi: ch6 B3 切片 — …」）
 #   章级期：「ch6 阶段N …」／「ch6 v1.0 …」／「tracks(ch6): chapter review|deslop …」
@@ -100,6 +107,9 @@ if [ -z "$NEXT" ]; then
     EXPECT="阶段1 合成（manuscripts/ch6-sample.md 未生成）"
   elif [ ! -f "tracks/ch6-deslop-report.md" ]; then
     EXPECT="阶段2 去 AI 味（tracks/ch6-deslop-report.md 未生成）"
+  elif [ -f "tracks/ch6-review.md" ]; then
+    REVIEW_DONE=1
+    EXPECT="阶段3 已落（评审在仓）→ 等作者改稿 → 改稿后由主编出 v1.0 认可记录"
   else
     EXPECT="阶段3 四视角评审 + v1.0（尚无 ch6 v1.0 定稿 commit）"
   fi
@@ -143,6 +153,13 @@ read -r RUNS_OK RUNS_BAD <<<"$(count_runs)"
 # 当日已有切片 commit → 正常
 if [ "$COMMITS" -ge 1 ]; then echo "NO_REPLY"; exit 0; fi
 echo "[ch6-verify] SLOT_DATE=$SLOT_DATE 槽日已有 commit ${COMMITS} 条（期望：$EXPECT）→ 正常" >> /tmp/ch6-verify-last.log
+
+# 「评审已落」态（2026-11-20 Mico 补）：21:30 槽按⑤并行锁**故意不产 commit** →
+#   当晚 0 commit 属预期 → **不报🔴、也不自动补跑**（补跑只会再报一次「阶段 3 进行中」）。
+if [ "$REVIEW_DONE" = "1" ]; then
+  echo "ℹ️ ch6（槽日 $SLOT_DATE）：阶段 3 已落（评审报告在仓）→ 21:30 槽按⑤并行锁不重复跑评审、当晚 0 commit 属预期，无需人工查。现在该做的是「$EXPECT」。"
+  exit 0
+fi
 
 # 当日有**成功**条目 → 槽跑过了却 0 commit → 只告警，不自动重跑（防重复交付）
 if [ "${RUNS_OK:-0}" -ge 1 ]; then
