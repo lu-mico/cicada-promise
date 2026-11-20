@@ -195,6 +195,19 @@ print(ok, bad)
 }
 
 COMMITS=$(git log --since="$SLOT_START" --until="$SLOT_END" --pretty=%s 2>/dev/null | grep -cE "$COMMIT_RE")
+
+# ⚠️ **「已存在但未提交」的切片文件**（2026-11-20 14:1x 实测踩到）：作者的 B1 写完（check.py 过）
+#    却一直是未跟踪状态 → **远端没有这一场**，而验收只数 commit → 看不见 → 这一场就丢了。
+#    → 这里单独查工作树：���章有切片文件没提交 → 🟡 待提交（远端缺这些稿件）。
+#    → 触发条件收窄为「**本章当晚已交 commit** ＋ **仍有切片文件没提交**」：
+#      ① 零 commit 的状态（漏跑／阶段判定）不受影响 → 基线那 14 态的读数不被这条遮住；
+#      ② 槽写完就提交 → 22:05 时工作树本该干净 → 正常路径永不触发。
+UNCOMMITTED=$(git status --porcelain -- "manuscripts/${CHAPTER}-"*.md 2>/dev/null | grep -v "sample" || true)
+if [ -n "$UNCOMMITTED" ] && [ "${COMMITS:-0}" -ge 1 ]; then
+  echo "🟡 ${CHAPTER} 待提交（槽日 $SLOT_DATE）：本章当晚已交 ${COMMITS} 条 commit，但仍有切片文件**已存在却没提交** → 远端缺这些稿件，交割前请提交并 push："
+  echo "$UNCOMMITTED"
+  exit 0
+fi
 read -r RUNS_OK RUNS_BAD <<<"$(count_runs)"
 
 # 当日已有切片 commit → 正常
