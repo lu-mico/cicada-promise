@@ -244,7 +244,7 @@ python3 tracks/check.py manuscripts/ch7-<切片号>.md
   当次自测：`CHAPTER=ch7 DRY_RUN=1 bash tracks/verify_daily_slice.sh` → `NO_REPLY`、退出码 0（白天不在 21:45+ 验收窗口，静默正确）。
   📌 **ch6 的两个 cron 槽已不再指向 ch6** —— ch6 已定稿，**ch6 的 22:05 验收不再跑**（ch6 的认可记录 `tracks/ch6-v1.0-acceptance.md` 已落，不再需要逐夜验收）。
 
-- 📌 **22:05 自动验收（cron `9f6e770e`）现在仍指向 ch6**：`tracks/verify_daily_slice.sh:2`「ch6 每日切片交付验收」、`:25` `ORDER="A1 B1 A2 B2 A3 B3"`、`:99-100` 的 commit 正则写死 `ch6 …`。**切 ch7 前，22:05 对 ch7 一律静默**（它只认 `manuscripts/ch6-*`）→ **ch7 立轨的必办事项：主编把该脚本与 21:30 cron prompt 同批切到 ch7**（R54 ① 的原话是「不得自行开 ch7 轨道」，现由主编开，切换同批做）。
+- ~~📌 **22:05 自动验收（cron `9f6e770e`）现在仍指向 ch6**~~ —— **2026-11-20 09:3x 已作废（槽已切到 ch7，见上一条「切槽已完成」）**。**历史留档**：当时 `tracks/verify_daily_slice.sh` 整份写死 ch6（`:25` `ORDER="A1 B1 A2 B2 A3 B3"`、`:99-100` 的 commit 正则）→ **已按章参数化**（commit `2861f38`：`CHAPTER="${CHAPTER:-ch6}"`、六处章号化、**commit 计数按章隔离**），22:05 现跑 `CHAPTER=ch7 bash tracks/verify_daily_slice.sh`。
 - ⚠️ **R50：证据窗口按「槽日」算，不按「脚本运行日」算**（跨午夜补验会假 FAIL；22:05 被拖到 00:0x 会静默消失）。口径：**SLOT_DATE = 最近一个已过去的 21:30 槽所在日期**。自测：`SLOT_DATE_OVERRIDE=2026-11-02 DRY_RUN=1 bash tracks/verify_daily_slice.sh`。
 - **cron「跑过」≠「产出」**：验收必须看 `git log` 有无新 commit，不能看 `lastRunStatus=ok`。
 - 📌 **R53：进度行是快照，不是事实源。** ① cron prompt 的进度行每次交割验收后**立刻刷新**；② 任何「某场已交」只认三样：切片文件在不在 · **该场自己的** commit 在不在 · 该槽 `status=ok`；③ 脚本的结论标签**不许在未完成时打「通过」**（`check_line_totals.py` 的 `[PENDING]` 就是为此改的——**而 ch7 现在连 PENDING 都不会打，直接打 OK**，见 §七 2c）。
