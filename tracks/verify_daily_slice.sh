@@ -15,6 +15,12 @@
 #    → 判据只看 **status=ok** 的条目；老脚本用 grep 数条目，error 条目会被算成「有条目」，
 #      于是只告警不补跑 → 那晚的切片会静默丢失。本版改用 JSON 解析，error/interrupted 单独计数。
 #
+# ⚠️ **退出码恒 0**（本脚本的所有失败路径都是 `exit 0`，含末尾）：**判定只由输出文本承载**
+#    （NO_REPLY＝静默 ok／🔴＝异常／🟡＝待提交／[DRY_RUN]＝体检结论），cron 也不看退出码。
+#    → **要把它当门禁调用，必须 grep 文本**（如 `grep -q "🔴"` 判红），**不能只看 `if cmd; then`** ——
+#    否则会拿到**假绿**（打错章号、REPO 不是仓、槽漏跑……全都会「成功」返回）。
+#    这不是缺陷，是 cron 文本产物的设计；但**必须显式声明**，免得下一轮有人把它当新洞重报。
+#
 # 用法：bash tracks/verify_daily_slice.sh           （正常执行，默认判 ch6）
 #       DRY_RUN=1 bash tracks/verify_daily_slice.sh （只体检不补跑）
 #       CHAPTER=ch7 bash tracks/verify_daily_slice.sh（判 ch7 的切片／阶段）
