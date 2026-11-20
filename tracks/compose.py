@@ -94,6 +94,20 @@ HEAD_CH6 = """# 《夏蝉的诺言》第六章·样章（A/B 双线）
 > 版本：v1.0（2026-11-20；阶段 1 合成 → 阶段 2 去 AI 味 → 阶段 3 四视角评审 → 评审合并对照表逐条改稿 → v1.0）
 """
 
+HEAD_CH7 = """# 《夏蝉的诺言》第七章·样章（A/B 双线）
+
+> 编制：Yomi（主编）｜日期：2026-11-20 立轨
+> 对应大纲：[outline/plan-v2.md §5 ch7](../outline/plan-v2.md)
+> 合成来源：A 线 = [ch7-A1](ch7-A1.md) + [ch7-A2](ch7-A2.md) + [ch7-A3](ch7-A3.md)；
+> B 线 = [ch7-B1](ch7-B1.md) + [ch7-B2](ch7-B2.md) + [ch7-B3](ch7-B3.md)
+> 合成顺序：A1 → B1 → A2 → B2 → A3 → B3（plan-v2 §5「每章 A/B 交错」，严格逐场交替；体例同 ch4／ch5／ch6；
+> **全章最后一段落在 B3，A 线收束在 A3** —— tracks/ch7-daily.md「八之二」D9）
+> 本章双线：A 线 · 钟表匠（周睿视角，2026）｜ B 线 · 抑郁加重（晓晓视角，1996）
+> 切片字数（check.py 实测）：六场齐后回填
+> 唯一事实源：[tracks/ch7-daily.md §三](ch7-daily.md)（2026-11-20 从 ch6-notes.md §三 抄入，**只读**）
+> 版本：v0.1（章级首合，六场齐后生成）
+"""
+
 CHAPTERS = {
     "ch3": {
         "out": "ch3-sample.md",
@@ -148,6 +162,21 @@ CHAPTERS = {
             "B": {"title": "## B 线 · 立誓", "pov": "晓晓视角，1996"},
         },
         "head": HEAD_CH6,
+    },
+    "ch7": {
+        "out": "ch7-sample.md",
+        "notes": "ch7-notes.md",
+        # 交错：A/B 严格交替（plan-v2 §5「每章 A/B 交错」）；体例同 ch4／ch5／ch6。
+        # 2026-11-20 立轨（tracks/ch7-daily.md「八之二」D9）：与前三章同一手势 ——
+        # 全章末段落 B3，A 线收束在 A3。
+        "order": ["A1", "B1", "A2", "B2", "A3", "B3"],
+        "mode": "interleaved",
+        "slice_title": "short",  # H2 = "### A1 · 门与铃"（去生产代号，沿用 2026-11-05 体例裁定）
+        "lines": {
+            "A": {"title": "## A 线 · 钟表匠", "pov": "周睿视角，2026"},
+            "B": {"title": "## B 线 · 抑郁加重", "pov": "晓晓视角，1996"},
+        },
+        "head": HEAD_CH7,
     },
 }
 

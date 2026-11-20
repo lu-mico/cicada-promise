@@ -97,8 +97,13 @@ REVIEW_DONE=0
 # ⚠️ **不能用宽口径「ch6」**：同日的**轨道维护类 commit**（如「tracks(ch6): R54 入档 …」）
 #    会被误当成阶段 commit → 22:05 槽看不见「今晚阶段没交」→ 又一次假绿（R53 同族）。
 SLICE_COMMIT_RE="ch6 [AB][0-9] 切片"
+# ch7（2026-11-20 · G4）：切章后 commit 标题同型 = 「Yomi: ch7 <切片号> 切片 — …」。
+#   期望串写死为「ch7 [AB][0-9] 切片」→ 只认「ch7 A1 切片」这一形态；
+#   「ch7 第一场切片」／「ch7-A1 切片」／「ch7 A1 slice」一律不算（与 ch6 同口径）。
+#   **上面那行 ch6 串一字未改**，ch7 只作独立分支并进下面的并集。
+CH7_SLICE_COMMIT_RE="ch7 [AB][0-9] 切片"
 STAGE_COMMIT_RE="ch6 (阶段[0-9]|v1\.0)|tracks\(ch6\): (chapter review|deslop)"
-COMMIT_RE="$SLICE_COMMIT_RE|$STAGE_COMMIT_RE"
+COMMIT_RE="$SLICE_COMMIT_RE|$CH7_SLICE_COMMIT_RE|$STAGE_COMMIT_RE"
 if [ -z "$NEXT" ]; then
   if git log --pretty=%s 2>/dev/null | grep -q "ch6 v1.0"; then
     echo "NO_REPLY"; exit 0

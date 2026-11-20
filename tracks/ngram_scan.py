@@ -187,6 +187,12 @@ def chapter_text(chapter, roster):
     return normalize(raw)[0], raw
 
 
+def chapter_slices(chapter):
+    """该章已落的切片文件（`manuscripts/<章>-<场>.md`，不含合成稿）。"""
+    d = ROOT / "manuscripts"
+    return sorted(p for p in d.glob(f"{chapter}-*.md") if "sample" not in p.name)
+
+
 def scan(chapter, k, cross_min, intra_min, roster, near_min=10):
     """返回扫描结果 dict。"""
     num = int(chapter[2:]) if chapter[2:].isdigit() else 0
@@ -318,12 +324,30 @@ def main():
     if args.selftest:
         return selftest()
 
+    # G3（2026-11-20）：**零切片必须判红**。旧版在没有一个切片文件时照样印
+    # 「跨章硬门禁命中：0（通过）」并 exit 0 —— 等于「什么都没扫」被当成「扫过且干净」。
+    # 判据只认「有正文字可扫」：一个 <章>-*.md 切片都没有、也没有合成稿 → 红。
+    sample = ROOT / "manuscripts" / f"{args.chapter}-sample.md"
+    if not chapter_slices(args.chapter) and not sample.exists():
+        print(f"=== 跨章／章内复读扫描（{args.chapter}）===")
+        print(f"  [FAIL] 没有 {args.chapter}-*.md 切片"
+              f"（也没有 {args.chapter}-sample.md 合成稿）→ 无可扫描正文，**判红**"
+              f"（零切片 ≠ 0 命中，不得记作通过）")
+        return 1
+
     roster = ROSTERS.get(args.chapter, DEFAULT_ROSTER)
     res = scan(args.chapter, args.k, args.cross, args.intra, roster, args.near)
 
     if args.json:
         print(json.dumps(res, ensure_ascii=False, indent=2))
-        return 1 if res["hard"] else 0
+        return 1 if (res["hard"] or not res["scenes"]) else 0
+
+    # 文件在、但一场正文段都切不出来（正文段口径见 check.py）→ 同样不算通过。
+    if not res["scenes"]:
+        print(f"=== 跨章／章内复读扫描（{args.chapter}）===")
+        print(f"  [FAIL] {args.chapter} 有切片文件但切不出正文段"
+              f"（无「## A1 ·」/「## A 线 ·」标题或正文为空）→ **判红**（不是 0 命中）")
+        return 1
 
     print(f"=== 跨章／章内复读扫描（{args.chapter} vs ch1–ch{res['chapter'][2:].lstrip('0') or '1'} 之前各章）===")
     print(f"    口径：正文段（check.py）· {args.k}-gram 最长公共子串"

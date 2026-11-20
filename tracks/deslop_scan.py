@@ -92,7 +92,17 @@ def main():
     print(f"=== 去 AI 味检测归属（{args.chapter}）===")
     print("    口径：正文段（check.py）· 就地跑（白名单有效）· 行号回映射到原切片文件")
 
+    # G3（2026-11-20）：**零切片必须判红**。旧版在一场切片都没有时照样印
+    # 「blocking 合计：0」＋「[OK] 归属扫描完成」并 exit 0 —— 等于「没扫」被当成「扫过且干净」。
+    slices = sorted(p for p in (ROOT / "manuscripts").glob(f"{args.chapter}-*.md")
+                    if "sample" not in p.name)
+    if not slices:
+        print(f"\n  [FAIL] 没有 {args.chapter}-*.md 切片 → 无可扫描正文，**判红**"
+              f"（零切片 ≠ blocking 0，不得记作通过）")
+        return 1
+
     total_blocking = 0
+    scanned = 0
     tmp_files = []
     for s in roster:
         src = ROOT / "manuscripts" / f"{args.chapter}-{s}.md"
@@ -108,6 +118,7 @@ def main():
         tmp = ROOT / "manuscripts" / f".tmp-body-{s}.md"
         tmp.write_text(body, encoding="utf-8")
         tmp_files.append(tmp)
+        scanned += 1
 
         findings = []
         for script in ("check-ai-patterns.js", "check-degeneration.js"):
@@ -135,6 +146,11 @@ def main():
     for tmp in tmp_files:
         if not args.keep:
             tmp.unlink(missing_ok=True)
+
+    if scanned == 0:
+        print(f"\n  [FAIL] {args.chapter} 有切片文件但一场正文段都切不出来"
+              f"（无「## A1 ·」/「## A 线 ·」标题或正文为空）→ **判红**（不是 blocking 0）")
+        return 1
 
     print(f"\n  ▸ 全章 blocking 合计：{total_blocking}")
     print("  📌 改的是**切片原件**（manuscripts/<章>-<场>.md），不是合成稿 → 改完重合成再复扫。")

@@ -120,6 +120,18 @@ LINE_TOTAL_CASES = [
                                         ("B1", 1300), ("B2", 1300), ("B3", 1400)], "ch3", False),
 ]
 
+# ── 交稿顺序用例（2026-11-20 补，G2 同族）────────────────────────────────────
+# 选片规则＝「切片表顺序里第一个尚不存在的场」→ 已交场次必须是名册的**前缀集合**。
+# 「只有 B 线」是**量错对象**（A 线 0 字），不得退化成 PENDING 放行。
+# 结构：(名称, [(场景标签, 正文汉字数)], 章号, 期望是否报错)
+ORDER_CASES = [
+    ("跳场·只有 B 线（A 线 0 字）", [("B1", 1500), ("B2", 1500), ("B3", 1500)], "ch7", True),
+    ("按序·只交 A1（A 线 0 字以外）", [("A1", 1500)], "ch7", False),
+    ("按序·A1 B1 A2", [("A1", 1500), ("B1", 1500), ("A2", 1500)], "ch7", False),
+    ("齐章·六场齐", [("A1", 1500), ("A2", 1500), ("A3", 1500),
+                     ("B1", 1500), ("B2", 1500), ("B3", 1500)], "ch7", False),
+]
+
 
 def run_suite(verbose=True):
     """跑全套用例，返回失败用例名列表。"""
@@ -201,6 +213,12 @@ def run_suite(verbose=True):
             check(name + "（缺口写进 info 而非 error）",
                   any("还差" in i or "已达底线" in i for i in res["info"]),
                   f"info={res['info']}")
+
+    if verbose:
+        print("=== 交稿顺序（选片规则：已交场次必须是名册前缀）===")
+    for name, scenes, chap, expect_err in ORDER_CASES:
+        res = lr.analyze(scenes, chap)
+        check(name, bool(res["errors"]) == expect_err, f"errors={res['errors']}")
 
     return failed
 

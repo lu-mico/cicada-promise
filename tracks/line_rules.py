@@ -29,6 +29,9 @@ FLOORS = {
     "ch4": {"a": 4000, "b": 4000, "total": 8000},
     "ch5": {"a": 4100, "b": 4300, "total": 8400},
     "ch6": {"a": 4100, "b": 4300, "total": 8400},
+    # ch7（2026-11-20 立，tracks/ch7-daily.md「八之二」D10）：沿用 ch6 四个数字，**只认下限**。
+    # 无此条时 analyze() 走「无线级口径 → 只报数不判闸」→ A 线 0 字也印 [OK]（G2 假绿）。
+    "ch7": {"a": 4100, "b": 4300, "total": 8400},
 }
 
 # 各章场次名册（用于「还差多少／还差几场」推算）。
@@ -37,11 +40,25 @@ ROSTERS = {
     "ch4": ["A1", "A2", "A3", "B1", "B2", "B3"],
     "ch5": ["A1", "A2", "A3", "B1", "B2", "B3"],
     "ch6": ["A1", "A2", "A3", "B1", "B2", "B3"],
+    "ch7": ["A1", "A2", "A3", "B1", "B2", "B3"],
+}
+
+# 交付顺序（＝ `tracks/compose.py` 各章配置的 `order`；ch3 是 A 线整块在前，ch4 起交错）。
+# 用途：交稿顺序闸 —— 「选片规则＝第一个尚不存在的场」⇒ 已交场次必须是本表的前缀集合。
+# 与 ROSTERS 分开是因为 ROSTERS 只是名册（用于算缺口），不是交付次序。
+DELIVERY = {
+    "ch3": ["A1", "A2", "A3", "B1", "B2", "B3"],
+    "ch4": ["A1", "B1", "A2", "B2", "A3", "B3"],
+    "ch5": ["A1", "B1", "A2", "B2", "A3", "B3"],
+    "ch6": ["A1", "B1", "A2", "B2", "A3", "B3"],
+    "ch7": ["A1", "B1", "A2", "B2", "A3", "B3"],
 }
 
 # 单场实操区间（只报 WARN，不作硬闸）。
 PER_SCENE = {
     "ch6": {"A": (1300, 1700), "B": (1434, 1600)},
+    # ch7：A3 的 1,300–1,700 预批带**不预先续用**（D10）→ A 线按 1,367–1,600 的实操区间报 WARN。
+    "ch7": {"A": (1367, 1600), "B": (1434, 1600)},
 }
 
 # 坏判据（`gate_selftest.py --prove` 用）：永远放行 → 用例必须变红。
@@ -69,7 +86,7 @@ def line_of(label):
     return m.group(1)
 
 
-def analyze(scenes, chapter, floors=None, per_scene=None, rosters=None):
+def analyze(scenes, chapter, floors=None, per_scene=None, rosters=None, delivery=None):
     """判线级合计 + 全章合计 + 单场区间 + 剩余缺口推算。
 
     scenes: [(场景标签, 正文汉字数), ...]
@@ -78,6 +95,7 @@ def analyze(scenes, chapter, floors=None, per_scene=None, rosters=None):
     floors = FLOORS if floors is None else floors
     per_scene = PER_SCENE if per_scene is None else per_scene
     rosters = ROSTERS if rosters is None else rosters
+    delivery = DELIVERY if delivery is None else delivery
     chapter = norm_chapter(chapter)
 
     errors, warns, info = [], [], []
@@ -113,6 +131,20 @@ def analyze(scenes, chapter, floors=None, per_scene=None, rosters=None):
 
     roster = rosters.get(chapter, [])
     missing = [s for s in roster if s not in present]
+
+    # 交稿顺序闸（2026-11-20 补，G2 同族）：选片规则是「切片表顺序里第一个尚不存在的场」
+    #   （tracks/ch7-daily.md §二）→ **已交场次必须构成名册的前缀集合**。
+    #   跳场（例：B1／B2／B3 已交而 A1 未交）不是「写到一半」，是**量错了对象**：
+    #   此时线级合计无从判定，若只报 PENDING／缺口，就会退化成「A 线 0 字也放行」。
+    order = delivery.get(chapter) or roster
+    if order and set(present) <= set(order) and len(set(present)) < len(order):
+        n = len(set(present))
+        if set(present) != set(order[:n]):
+            errors.append(
+                f"交稿顺序异常：已交 {('、'.join(sorted(set(present))))} 不构成名册前缀"
+                f"（按交付顺序应为 {('、'.join(order[:n]))}）→ 线级合计无法判定（跳场交付）"
+            )
+
     info.append(
         f"{chapter} 线级实测：A {totals['A']}／B {totals['B']}／全章 {total}"
         f"（底线 A {rule['a']}／B {rule['b']}／全章 {rule['total']}）"
