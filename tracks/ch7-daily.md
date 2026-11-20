@@ -240,6 +240,10 @@ python3 tracks/check.py manuscripts/ch7-<切片号>.md
   - 有条目但 0 commit = 才查选片规则（R33 的 10/30 属此类）。
 - `cron list` 的「Next 2m ago」是**下次触发时刻**，不是「lastRun」；「Last」栏才是上一轮。
 - ⚠️ **巡检时点必须晚于切片槽**：切片 cron 在 **21:30**，巡检在 **20:00**——20:00 查「当日 commit」时当天窗口**还没开**（R39 误判即由此而来）。判据：**22:05 之后**才查当日产出。
+- 📌 **切槽已完成（2026-11-20 09:3x · 主编）**：21:30 切片 cron `be2b1e10-33ef-47f4-bd25-026fef90fa86` 已改名为「ch7 daily slice 21:30」，**prompt 整份重写为 ch7**（选片规则＝ch7 表序 A1 B1 A2 B2 A3 B3；七道门禁当次跑；commit 标题「Yomi: ch7 <切片号> 切片 — …」；频道只报 hash ＋ 一句话；D1–D12 硬约束摘录在 prompt 内）；22:05 验收 cron `9f6e770e-4f27-4ba5-9ba0-44ba7d251e40` 已改名「ch7 slice verify 22:05」并改为 `CHAPTER=ch7 bash tracks/verify_daily_slice.sh`。
+  当次自测：`CHAPTER=ch7 DRY_RUN=1 bash tracks/verify_daily_slice.sh` → `NO_REPLY`、退出码 0（白天不在 21:45+ 验收窗口，静默正确）。
+  📌 **ch6 的两个 cron 槽已不再指向 ch6** —— ch6 已定稿，**ch6 的 22:05 验收不再跑**（ch6 的认可记录 `tracks/ch6-v1.0-acceptance.md` 已落，不再需要逐夜验收）。
+
 - 📌 **22:05 自动验收（cron `9f6e770e`）现在仍指向 ch6**：`tracks/verify_daily_slice.sh:2`「ch6 每日切片交付验收」、`:25` `ORDER="A1 B1 A2 B2 A3 B3"`、`:99-100` 的 commit 正则写死 `ch6 …`。**切 ch7 前，22:05 对 ch7 一律静默**（它只认 `manuscripts/ch6-*`）→ **ch7 立轨的必办事项：主编把该脚本与 21:30 cron prompt 同批切到 ch7**（R54 ① 的原话是「不得自行开 ch7 轨道」，现由主编开，切换同批做）。
 - ⚠️ **R50：证据窗口按「槽日」算，不按「脚本运行日」算**（跨午夜补验会假 FAIL；22:05 被拖到 00:0x 会静默消失）。口径：**SLOT_DATE = 最近一个已过去的 21:30 槽所在日期**。自测：`SLOT_DATE_OVERRIDE=2026-11-02 DRY_RUN=1 bash tracks/verify_daily_slice.sh`。
 - **cron「跑过」≠「产出」**：验收必须看 `git log` 有无新 commit，不能看 `lastRunStatus=ok`。
