@@ -43,6 +43,10 @@ esac
 ORDER="${ORDER:-$DEFAULT_ORDER}"
 
 cd "$REPO" 2>/dev/null || { echo "🔴 ${CHAPTER} 验收失败：进不了项目仓 $REPO"; exit 0; }
+# ⚠️ 硬化：`cd ""` 在 bash 里返回 0 且**不换目录** → 若 REPO 被 export 成空串，脚本会去判
+#    「当时的工作目录」而不是项目仓（cwd 恰好是仓时看不出来，换过 cwd 就是错账）。
+#    ⚠️ 注意用 `-e` 不是 `-d`：**git worktree 的 .git 是文件**（`-d` 会把它误判成非仓）。
+[ -e "$REPO/.git" ] || { echo "🔴 ${CHAPTER} 验收失败：REPO 不是 git 仓（$REPO）→ 拒绝在未知目录上判账"; exit 0; }
 
 TODAY="$(TZ=Asia/Tokyo date +%F)"
 YESTERDAY="$(TZ=Asia/Tokyo date -v-1d +%F)"
