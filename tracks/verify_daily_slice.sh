@@ -1,5 +1,5 @@
 #!/bin/bash
-# ch6 每日切片交付验收（tracks/ch6-daily.md §八 铁律的自动化版）
+# 每日切片／阶段交付验收（tracks/<章>-daily.md §八 铁律的自动化版）· 按章参数化（2026-11-20）
 #
 # 规则（21:30 切片后 22:00 查两条证据）：
 #   ① git log 有无当日 commit      ② openclaw cron runs 有无当日「成功」条目
@@ -15,16 +15,34 @@
 #    → 判据只看 **status=ok** 的条目；老脚本用 grep 数条目，error 条目会被算成「有条目」，
 #      于是只告警不补跑 → 那晚的切片会静默丢失。本版改用 JSON 解析，error/interrupted 单独计数。
 #
-# 用法：bash tracks/verify_daily_slice.sh          （正常执行）
+# 用法：bash tracks/verify_daily_slice.sh           （正常执行，默认判 ch6）
 #       DRY_RUN=1 bash tracks/verify_daily_slice.sh （只体检不补跑）
+#       CHAPTER=ch7 bash tracks/verify_daily_slice.sh（判 ch7 的切片／阶段）
+#
+# ⚠️ 按章参数化（2026-11-20）：本脚本原先整份写死 ch6。现由 `CHAPTER` 推导
+#    「切片 ORDER／切片路径／三个阶段产物路径／v1.0 定稿判定／EXPECT 文案／commit 期望串」六处；
+#    `CHAPTER` 未设 → ch6，**ch6 模式的读数与参数化前逐字相同**（对照见 commit 说明）。
+#    commit 期望串**按章隔离**：ch6 模式只数 ch6 形态、ch7 模式只数 ch7 形态
+#    （此前是并集 → ch6 期间一条「ch7 A1 切片」会被算成「今晚交了」＝双向假绿）。
 
 set -u
-REPO="/Users/lumico/.openclaw/workspace-yomi/projects/cicada-promise"
+CHAPTER="${CHAPTER:-ch6}"
+# 章号白名单：只放行 `ch<数字>` 形态，防手误传进来一个怪值把判据静默退化成宽口径
+case "$CHAPTER" in
+  ch[0-9]|ch[0-9][0-9]) ;;
+  *) echo "🔴 验收参数错：CHAPTER=$CHAPTER（形如 ch6／ch7）"; exit 0 ;;
+esac
+REPO="${REPO:-/Users/lumico/.openclaw/workspace-yomi/projects/cicada-promise}"   # 副本测试可覆盖；不设＝真仓
 JOB="be2b1e10-33ef-47f4-bd25-026fef90fa86"
-# 切片表顺序（tracks/ch6-daily.md §二）：表序第一个尚不存在的切片 = 下一场
-ORDER="A1 B1 A2 B2 A3 B3"
+# 切片表顺序（tracks/<章>-daily.md §二）：表序第一个尚不存在的切片 = 下一场
+# ch3–ch7 同序（交错）；某章要换序只在这里加分支，别在下面写 if。
+case "$CHAPTER" in
+  ch6|ch7) DEFAULT_ORDER="A1 B1 A2 B2 A3 B3" ;;
+  *)       DEFAULT_ORDER="A1 B1 A2 B2 A3 B3" ;;
+esac
+ORDER="${ORDER:-$DEFAULT_ORDER}"
 
-cd "$REPO" 2>/dev/null || { echo "🔴 ch6 验收失败：进不了项目仓 $REPO"; exit 0; }
+cd "$REPO" 2>/dev/null || { echo "🔴 ${CHAPTER} 验收失败：进不了项目仓 $REPO"; exit 0; }
 
 TODAY="$(TZ=Asia/Tokyo date +%F)"
 YESTERDAY="$(TZ=Asia/Tokyo date -v-1d +%F)"
@@ -67,56 +85,64 @@ print(f"SLOT_END='{end:%Y-%m-%d %H:%M:%S}'")
 print(f"SLOT_NEXT='{(d + datetime.timedelta(days=1)):%Y-%m-%d}'")
 PYEOF
 )"
-echo "[ch6-verify] 运行时刻 $TODAY $NOW_HM · 校验槽日 SLOT_DATE=$SLOT_DATE · 证据窗口 $SLOT_START → $SLOT_END" >> /tmp/ch6-verify-last.log
+echo "[${CHAPTER}-verify] 运行时刻 $TODAY $NOW_HM · 校验槽日 SLOT_DATE=$SLOT_DATE · 证据窗口 $SLOT_START → $SLOT_END" >> /tmp/${CHAPTER}-verify-last.log
 
 NEXT=""
 for s in $ORDER; do
-  if [ ! -f "manuscripts/ch6-$s.md" ]; then NEXT="$s"; break; fi
+  if [ ! -f "manuscripts/${CHAPTER}-$s.md" ]; then NEXT="$s"; break; fi
 done
 
 # ── 期望工作判定（2026-11-18 扩充：切片期 → 章级阶段期）────────────────────
-# 切片期：下一场切片文件不存在 → 今晚该交一场切片（commit 标题含「ch6 …切片」）
+# 切片期：下一场切片文件不存在 → 今晚该交一场切片（commit 标题含「<章> …切片」）
 # 章级期（六场齐，2026-11-17 B3 之后进入）：改判阶段 ——
-#   ① 阶段1 合成：manuscripts/ch6-sample.md 未生成
-#   ② 阶段2 去 AI 味：tracks/ch6-deslop-report.md 未生成
-#   ③ 阶段3 四视角评审 + v1.0：尚无 ch6 v1.0 定稿 commit
-#   ④ 本章已定稿（v1.0 commit 在 git log 里）→ 无待办 → 静默（等主编切 ch7 轨道）
+#   ① 阶段1 合成：manuscripts/<章>-sample.md 未生成
+#   ② 阶段2 去 AI 味：tracks/<章>-deslop-report.md 未生成
+#   ③ 阶段3 四视角评审 + v1.0：尚无 <章> v1.0 定稿 commit
+#   ④ 本章已定稿（v1.0 commit 在 git log 里）→ 无待办 → 静默（等主编切下一章轨道）
 # ⚠️ 2026-11-18 之前本脚本在六场齐时一律 NO_REPLY → 切到章级轨道后，
 #    21:30 槽若被宿主掐掉／空跑，22:05 槽**看不见**（切片已齐 → 直接静默）→ 纪律失去可执行轨道。
 EXPECT=""
 # 「评审已落」态（2026-11-20 Mico 补）
-#   阶段 3 的产物是 `tracks/ch6-review.md`；它已落仓、但 v1.0 定稿 commit 还没有时：
+#   阶段 3 的产物是 `tracks/<章>-review.md`；它已落仓、但 v1.0 定稿 commit 还没有时：
 #   21:30 槽按 prompt 的**⑤并行锁**「不重复跑评审、不重复改稿」→ **当晚 0 commit 是预期**，
 #   不是「产出/提交失败」。旧逻辑只认「有成功条目 + 0 commit = 🔴 异常」→ 每晚必误报，
 #   而且报出的 EXPECT 还写着「阶段3 四视角评审 + v1.0」→ **会把已经做完的阶段说成待做**，
 #   存在把「重复评审」重新勾起来的风险。
 REVIEW_DONE=0
-# commit 判据分两种形态，**取并集**：
-#   切片期：「ch6 [AB][0-9] 切片」（如「Yomi: ch6 B3 切片 — …」）
-#   章级期：「ch6 阶段N …」／「ch6 v1.0 …」／「tracks(ch6): chapter review|deslop …」
+# commit 判据分两种形态，且**按章隔离**（同一时刻只认本章的形态）：
+#   切片期：「<章> [AB][0-9] 切片」（如「Yomi: ch6 B3 切片 — …」）
+#   章级期：「<章> 阶段N …」／「<章> v1.0 …」／「tracks(<章>): chapter review|deslop …」
 # ⚠️ **不能用宽口径「ch6」**：同日的**轨道维护类 commit**（如「tracks(ch6): R54 入档 …」）
 #    会被误当成阶段 commit → 22:05 槽看不见「今晚阶段没交」→ 又一次假绿（R53 同族）。
 SLICE_COMMIT_RE="ch6 [AB][0-9] 切片"
 # ch7（2026-11-20 · G4）：切章后 commit 标题同型 = 「Yomi: ch7 <切片号> 切片 — …」。
 #   期望串写死为「ch7 [AB][0-9] 切片」→ 只认「ch7 A1 切片」这一形态；
 #   「ch7 第一场切片」／「ch7-A1 切片」／「ch7 A1 slice」一律不算（与 ch6 同口径）。
-#   **上面那行 ch6 串一字未改**，ch7 只作独立分支并进下面的并集。
+#   **上面那行 ch6 串一字未改**，ch7 走独立分支 `CH_SLICE_RE`（见下面的 case）。
 CH7_SLICE_COMMIT_RE="ch7 [AB][0-9] 切片"
-STAGE_COMMIT_RE="ch6 (阶段[0-9]|v1\.0)|tracks\(ch6\): (chapter review|deslop)"
-COMMIT_RE="$SLICE_COMMIT_RE|$CH7_SLICE_COMMIT_RE|$STAGE_COMMIT_RE"
+# ⚠️ 2026-11-20 修假绿：此前 `COMMIT_RE` 是「ch6|ch7|阶段」的**并集** →
+#    ch6 期间一条「ch7 A1 切片」commit 会被算成「今晚交了」（ch7 期间反过来同理）→ 双向假绿。
+#    现按章二选一：ch6 模式只认 ch6 形态，ch7 模式只认 ch7 形态，别章形态一律不数。
+case "$CHAPTER" in
+  ch6) CH_SLICE_RE="$SLICE_COMMIT_RE" ;;
+  ch7) CH_SLICE_RE="$CH7_SLICE_COMMIT_RE" ;;
+  *)   CH_SLICE_RE="$CHAPTER [AB][0-9] 切片" ;;
+esac
+STAGE_COMMIT_RE="${CHAPTER} (阶段[0-9]|v1\.0)|tracks\(${CHAPTER}\): (chapter review|deslop)"
+COMMIT_RE="$CH_SLICE_RE|$STAGE_COMMIT_RE"
 if [ -z "$NEXT" ]; then
-  if git log --pretty=%s 2>/dev/null | grep -q "ch6 v1.0"; then
+  if git log --pretty=%s 2>/dev/null | grep -q "${CHAPTER} v1.0"; then
     echo "NO_REPLY"; exit 0
   fi
-  if [ ! -f "manuscripts/ch6-sample.md" ]; then
-    EXPECT="阶段1 合成（manuscripts/ch6-sample.md 未生成）"
-  elif [ ! -f "tracks/ch6-deslop-report.md" ]; then
-    EXPECT="阶段2 去 AI 味（tracks/ch6-deslop-report.md 未生成）"
-  elif [ -f "tracks/ch6-review.md" ]; then
+  if [ ! -f "manuscripts/${CHAPTER}-sample.md" ]; then
+    EXPECT="阶段1 合成（manuscripts/${CHAPTER}-sample.md 未生成）"
+  elif [ ! -f "tracks/${CHAPTER}-deslop-report.md" ]; then
+    EXPECT="阶段2 去 AI 味（tracks/${CHAPTER}-deslop-report.md 未生成）"
+  elif [ -f "tracks/${CHAPTER}-review.md" ]; then
     REVIEW_DONE=1
     EXPECT="阶段3 已落（评审在仓）→ 等作者改稿 → 改稿后由主编出 v1.0 认可记录"
   else
-    EXPECT="阶段3 四视角评审 + v1.0（尚无 ch6 v1.0 定稿 commit）"
+    EXPECT="阶段3 四视角评审 + v1.0（尚无 ${CHAPTER} v1.0 定稿 commit）"
   fi
 else
   EXPECT="切片 $NEXT"
@@ -157,24 +183,24 @@ read -r RUNS_OK RUNS_BAD <<<"$(count_runs)"
 
 # 当日已有切片 commit → 正常
 if [ "$COMMITS" -ge 1 ]; then echo "NO_REPLY"; exit 0; fi
-echo "[ch6-verify] SLOT_DATE=$SLOT_DATE 槽日已有 commit ${COMMITS} 条（期望：$EXPECT）→ 正常" >> /tmp/ch6-verify-last.log
+echo "[${CHAPTER}-verify] SLOT_DATE=$SLOT_DATE 槽日已有 commit ${COMMITS} 条（期望：$EXPECT）→ 正常" >> /tmp/${CHAPTER}-verify-last.log
 
 # 「评审已落」态（2026-11-20 Mico 补）：21:30 槽按⑤并行锁**故意不产 commit** →
 #   当晚 0 commit 属预期 → **不报🔴、也不自动补跑**（补跑只会再报一次「阶段 3 进行中」）。
 if [ "$REVIEW_DONE" = "1" ]; then
-  echo "ℹ️ ch6（槽日 $SLOT_DATE）：阶段 3 已落（评审报告在仓）→ 21:30 槽按⑤并行锁不重复跑评审、当晚 0 commit 属预期，无需人工查。cron 当日成功条目 ${RUNS_OK:-0} 条（0 ＝ 宿主层压根没跑；但按⑤它本来也不该产 commit → 不补跑）。现在该做的是「$EXPECT」。"
+  echo "ℹ️ ${CHAPTER}（槽日 $SLOT_DATE）：阶段 3 已落（评审报告在仓）→ 21:30 槽按⑤并行锁不重复跑评审、当晚 0 commit 属预期，无需人工查。cron 当日成功条目 ${RUNS_OK:-0} 条（0 ＝ 宿主层压根没跑；但按⑤它本来也不该产 commit → 不补跑）。现在该做的是「$EXPECT」。"
   exit 0
 fi
 
 # 当日有**成功**条目 → 槽跑过了却 0 commit → 只告警，不自动重跑（防重复交付）
 if [ "${RUNS_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch6 异常（槽日 $SLOT_DATE）：cron 有当日成功条目但 0 commit，今晚该做的是「$EXPECT」。→ 产出/提交失败问题，需人工查；不要重复提交已存在的稿件。"
+  echo "🔴 ${CHAPTER} 异常（槽日 $SLOT_DATE）：cron 有当日成功条目但 0 commit，今晚该做的是「$EXPECT」。→ 产出/提交失败问题，需人工查；不要重复提交已存在的稿件。"
   exit 0
 fi
 
 # 下一场文件已存在却没 commit → 上一轮还在写或提交失败，不自动重跑（避免同夜双交）
-if [ -f "manuscripts/ch6-$NEXT.md" ]; then
-  echo "🟡 ch6 待提交（槽日 $SLOT_DATE）：manuscripts/ch6-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
+if [ -f "manuscripts/${CHAPTER}-$NEXT.md" ]; then
+  echo "🟡 ${CHAPTER} 待提交（槽日 $SLOT_DATE）：manuscripts/${CHAPTER}-$NEXT.md 已存在但当日 0 commit。→ 上一轮可能仍在写/提交失败，请人工确认后再决定是否补跑。"
   exit 0
 fi
 
@@ -190,12 +216,12 @@ if [ "${DRY_RUN:-0}" = "1" ]; then
   exit 0
 fi
 
-( openclaw cron run "$JOB" >/tmp/ch6-backfill.log 2>&1 & )
+( openclaw cron run "$JOB" >/tmp/${CHAPTER}-backfill.log 2>&1 & )
 sleep 10
 read -r RUNS2_OK RUNS2_BAD <<<"$(count_runs)"
 if [ "${RUNS2_OK:-0}" -ge 1 ]; then
-  echo "🔴 ch6 漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），今晚该做的是「$EXPECT」。"
+  echo "🔴 ${CHAPTER} 漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 已手动补跑 $JOB（补跑成功条目已出现），今晚该做的是「$EXPECT」。"
 else
-  echo "🔴 ch6 漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。今晚该做的是「$EXPECT」。"
+  echo "🔴 ${CHAPTER} 漏跑（槽日 $SLOT_DATE）：git 0 commit + $SLOT_STATE → 自动补跑未生效，请手动执行：openclaw cron run $JOB。今晚该做的是「$EXPECT」。"
 fi
 exit 0
