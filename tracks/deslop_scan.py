@@ -102,7 +102,9 @@ def main():
         return 1
 
     total_blocking = 0
-    scanned = 0
+    scanned = 0        # 扫到的场次数
+    scanned_hanzi = 0  # 扫到的**正文**汉字数（不含标题行）—— 为 0 说明「什么都没扫」
+    detector_failed = 0  # 检测器不可用的场次数（node 缺失／检测器报错）→ 什么都没查 ≠ blocking 0
     tmp_files = []
     for s in roster:
         src = ROOT / "manuscripts" / f"{args.chapter}-{s}.md"
@@ -119,6 +121,8 @@ def main():
         tmp.write_text(body, encoding="utf-8")
         tmp_files.append(tmp)
         scanned += 1
+        scanned_hanzi += sum(len(ck.HANZI.findall(b.split("\n", 1)[1] if "\n" in b else ""))
+                             for b, _ in bodies)
 
         findings = []
         for script in ("check-ai-patterns.js", "check-degeneration.js"):
@@ -126,6 +130,7 @@ def main():
                 findings += run_detector(script, tmp)
             except Exception as exc:  # pragma: no cover
                 print(f"\n  · {s} —— 检测器失败：{exc}")
+                detector_failed += 1
                 findings = None
                 break
         if findings is None:
@@ -147,9 +152,15 @@ def main():
         if not args.keep:
             tmp.unlink(missing_ok=True)
 
-    if scanned == 0:
-        print(f"\n  [FAIL] {args.chapter} 有切片文件但一场正文段都切不出来"
-              f"（无「## A1 ·」/「## A 线 ·」标题或正文为空）→ **判红**（不是 blocking 0）")
+    if detector_failed:
+        print(f"\n  [FAIL] {args.chapter} 有 {detector_failed} 场**检测器不可用**"
+              f"（node 缺失／检测器报错）→ **判红**（什么都没查 ≠ blocking 0）")
+        return 1
+
+    if scanned == 0 or scanned_hanzi == 0:
+        print(f"\n  [FAIL] {args.chapter} 有切片文件但正文为空"
+              f"（无「## A1 ·」/「## A 线 ·」标题，或标题下没有正文；实测正文汉字 {scanned_hanzi}）"
+              f"→ **判红**（不是 blocking 0）")
         return 1
 
     print(f"\n  ▸ 全章 blocking 合计：{total_blocking}")

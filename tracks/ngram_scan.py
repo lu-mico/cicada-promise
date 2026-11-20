@@ -204,6 +204,7 @@ def scan(chapter, k, cross_min, intra_min, roster, near_min=10):
             refs[f"ch{c}"] = norm
 
     cross_hits, intra_hits, scenes = [], [], []
+    chars = 0           # 扫到的正文汉字数（不含标题行）—— 为 0 说明「什么都没扫」
     scene_bodies = []   # [(场名, 文件名, [(正文段, 起始行), ...])]
     for s in roster:
         p = ROOT / "manuscripts" / f"{chapter}-{s}.md"
@@ -218,6 +219,7 @@ def scan(chapter, k, cross_min, intra_min, roster, near_min=10):
             norm, idx = normalize(body)
             if not norm:
                 continue
+            chars += len(ck.HANZI.findall(body))
             # —— 跨章（硬门禁）——
             for ref_name, ref in refs.items():
                 for a, b, length in common_runs(norm, ref, k):
@@ -278,6 +280,7 @@ def scan(chapter, k, cross_min, intra_min, roster, near_min=10):
         intra_hits += [(sc["scene"], h) for h in sc["intra"]]
     return {
         "chapter": chapter, "k": k, "cross_min": cross_min, "intra_min": intra_min,
+        "chars": chars,
         "scenes": scenes, "cross_hits": cross_hits, "intra_hits": intra_hits,
         "hard": [x for x in cross_hits if not x[1]["whitelisted"] and x[1].get("level") == "hard"],
         "near": [x for x in cross_hits if not x[1]["whitelisted"] and x[1].get("level") == "near"],
@@ -340,16 +343,19 @@ def main():
 
     if args.json:
         print(json.dumps(res, ensure_ascii=False, indent=2))
-        return 1 if (res["hard"] or not res["scenes"]) else 0
+        return 1 if (res["hard"] or not res["scenes"] or res["chars"] == 0) else 0
 
     # 文件在、但一场正文段都切不出来（正文段口径见 check.py）→ 同样不算通过。
-    if not res["scenes"]:
+    if not res["scenes"] or res["chars"] == 0:
         print(f"=== 跨章／章内复读扫描（{args.chapter}）===")
-        print(f"  [FAIL] {args.chapter} 有切片文件但切不出正文段"
-              f"（无「## A1 ·」/「## A 线 ·」标题或正文为空）→ **判红**（不是 0 命中）")
+        print(f"  [FAIL] {args.chapter} 有切片文件但正文为空"
+              f"（无「## A1 ·」/「## A 线 ·」标题，或标题下没有正文；实测正文汉字 {res['chars']}）"
+              f"→ **判红**（不是 0 命中）")
         return 1
 
-    print(f"=== 跨章／章内复读扫描（{args.chapter} vs ch1–ch{res['chapter'][2:].lstrip('0') or '1'} 之前各章）===")
+    _num = int(res["chapter"][2:]) if res["chapter"][2:].isdigit() else 1
+    _prev = max(1, _num - 1)  # 比的是 ch1–ch(N-1)（含自己＝显示错，且会把章内复读当跨章）
+    print(f"=== 跨章／章内复读扫描（{args.chapter} vs ch1–ch{_prev} 之前各章）===")
     print(f"    口径：正文段（check.py）· {args.k}-gram 最长公共子串"
           f" · 跨章 ≥{args.cross} 硬门禁 / 章内 ≥{args.intra} advisory")
     for sc in res["scenes"]:

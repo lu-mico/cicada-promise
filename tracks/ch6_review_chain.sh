@@ -71,11 +71,16 @@ echo ""
 echo "--- [3] compose.py ch6 → manuscripts/ 必须无 diff（重合成逐字节一致）---"
 python3 tracks/compose.py ch6
 echo "compose exit=$?"
-DIFF=$(git status --porcelain manuscripts/)
+# ⚠️ 只看**本章**的稿件：别章正在写的切片（如 ch7-A1.md）不该让 ch6 判红
+DIFF=$(git status --porcelain -- manuscripts/ch6-*.md manuscripts/ch6-sample.md)
+OTHER=$(git status --porcelain -- manuscripts/ | grep -v "manuscripts/ch6-" || true)
 if [ -z "$DIFF" ]; then
-  echo "[OK] manuscripts/ 无 diff（重合成逐字节一致）"
+  echo "[OK] 本章稿件无 diff（重合成逐字节一致）"
 else
-  echo "[FAIL] manuscripts/ 有 diff:"; echo "$DIFF"; FAIL=1
+  echo "[FAIL] 本章稿件有 diff:"; echo "$DIFF"; FAIL=1
+fi
+if [ -n "$OTHER" ]; then
+  echo "[提示] manuscripts/ 下**别章**的在写文件（不计入本章判定）："; echo "$OTHER"
 fi
 
 echo ""

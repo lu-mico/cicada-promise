@@ -30,6 +30,7 @@ import re
 def collect(paths):
     """从切片文件或章级合成稿里取出 [(场景标签, 正文汉字数)]。"""
     scenes, seen = [], {}
+    dups = []  # 重复场景必须进 errors —— 只印不判＝假绿
     for p in paths:
         text = pathlib.Path(p).read_text(encoding="utf-8")
         for title, body, _ in ck.slice_bodies(text):
@@ -37,10 +38,12 @@ def collect(paths):
             sid = re.match(r"^\s*([AB]\d*)", title)
             sid = sid.group(1) if sid else title.strip()
             if sid in seen:
-                print(f"  [ERROR] 场景 {sid} 出现两次（{seen[sid]} 与 {p}）→ 疑似重复计入口径")
+                msg = f"场景 {sid} 出现两次（{seen[sid]} 与 {p}）→ 疑似重复计入口径"
+                print(f"  [ERROR] {msg}")
+                dups.append(msg)
             seen[sid] = p
             scenes.append((title, n))
-    return scenes, seen
+    return scenes, seen, dups
 
 
 def main():
@@ -66,7 +69,7 @@ def main():
             chapter = ck.tr.chapter_of(p)
             if chapter:
                 break
-    scenes, _ = collect(paths)
+    scenes, _, dups = collect(paths)
     if not scenes:
         print("  [ERROR] 找不到正文段（既没有「## A1 ·」也没有「## A 线 ·」）")
         print("\n合计 ERROR 1 项")
@@ -77,6 +80,7 @@ def main():
         print(f"  · {title}  正文汉字 {n}")
 
     res = lr.analyze(scenes, chapter)
+    res["errors"] = list(res["errors"]) + dups  # 重复场景进账 → 退出码非 0
     for i in res["info"]:
         print(f"  [INFO] {i}")
     for w in res["warns"]:
