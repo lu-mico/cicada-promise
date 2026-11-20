@@ -131,7 +131,13 @@ esac
 STAGE_COMMIT_RE="${CHAPTER} (阶段[0-9]|v1\.0)|tracks\(${CHAPTER}\): (chapter review|deslop)"
 COMMIT_RE="$CH_SLICE_RE|$STAGE_COMMIT_RE"
 if [ -z "$NEXT" ]; then
-  if git log --pretty=%s 2>/dev/null | grep -q "${CHAPTER} v1.0"; then
+  # ⚠️ v1.0 定稿判定：必须是**定稿标题**，不能是「计划/排期」类标题，也不能是 v1.05
+  #    （旧写法 `grep -q "${CHAPTER} v1.0"` 是子串匹配 ＋ `.` 未转义 → 「计划 ch7 v1.0 的
+  #    时间表」「ch7 v1.05 排版」都会被当成已定稿 → **整晚静默 ＝ 假绿**）
+  #    口径：标题须以「<章> v1.0」或「Yomi: <章> v1.0」**开头** ＋ 其后不是数字 ＋ 不含计划类词
+  if git log --pretty=%s 2>/dev/null \
+       | grep -E "^(Yomi: )?${CHAPTER} v1\.0([^0-9]|$)" \
+       | grep -qvE "计划|排期|时间表|预计|准备|预告|待办"; then
     echo "NO_REPLY"; exit 0
   fi
   if [ ! -f "manuscripts/${CHAPTER}-sample.md" ]; then

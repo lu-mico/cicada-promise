@@ -1,0 +1,91 @@
+# tracks/verify_daily_slice_baseline_ch6.txt
+#
+# 【这是什么】tracks/verify_daily_slice.sh 在 **CHAPTER=ch6（默认模式）** 下、12 个固定状态上的
+#   **完整输出逐字快照**（含退出码）。用途：机器证明「按章参数化那一笔没有改动 ch6 行为」，
+#   并作为此后 ch6 模式的行为回归基线。本文件由脚本生成，**手工编辑无效**。
+#
+# 【怎么校验】见文件末尾 [REGEN] 段。判据只有一条：重生成的结果与本文件 `diff` 为空。
+#
+# 【口径作废 · 2026-11-20】此前 `COMMIT_RE` 把 ch7 期望串并进**并集**
+#   （`ch6 …|ch7 …|阶段…`）→ ch6 模式下一条「ch7 A1 切片」commit 会被算成「今晚已交」
+#   （ch7 模式下反向同理）＝双向假绿。现已按章隔离（ch6 模式只认 ch6 形态）。
+#   → **并集口径下产出的任何「今晚已交」读数一律作废，不得再当证据**；本章只认按章隔离口径。
+#   → 历史读数**不重算**（旧读数保留原样，仅作废、不再引用）。
+#
+# 【有意变更 · 2026-11-20】[S5] 是**唯一**与参数化前不同的状态：旧脚本 NO_REPLY（假绿），
+#   新脚本判漏跑。其余 11 个状态与参数化前的旧脚本**逐字相同**（旧/新 diff 空）。
+#   除 [S5] 外，本文件同时等于「参数化前旧脚本的输出」。
+#
+# 【生成环境】SLOT_DATE_OVERRIDE 固定槽日 ＋ 自建 stub cron 夹具 ＋ 历史 commit 工作树；
+#   不读真实 cron、不写真实仓、不产生任何 commit → 输出与生成时刻无关。
+#
+===== [R1] 历史态 96a0ecf（11-18 20:18 · 六场齐 · sample+deslop 在 · 无 review · 无 v1.0）｜槽日 2026-11-19｜cron 夹具 ok×1 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<96a0ecf 工作树> bash tracks/verify_daily_slice.sh  # 期望：🔴 异常（阶段3 待做）
+🔴 ch6 异常（槽日 2026-11-19）：cron 有当日成功条目但 0 commit，今晚该做的是「阶段3 四视角评审 + v1.0（尚无 ch6 v1.0 定稿 commit）」。→ 产出/提交失败问题，需人工查；不要重复提交已存在的稿件。
+[exit 0]
+
+===== [R2] 历史态 4ac23c4（11-20 00:11 · review 刚落仓，该 commit 在槽日窗口内）｜槽日 2026-11-19｜cron 夹具 ok×1 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<4ac23c4 工作树> bash tracks/verify_daily_slice.sh  # 期望：NO_REPLY（评审 commit 本身落在窗口内 → 已算当日交付）
+NO_REPLY
+[exit 0]
+
+===== [R3] 历史态 8cec218（11-17 21:31 · B3 当晚交付）｜槽日 2026-11-17｜cron 夹具 ok×1 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<8cec218 工作树> bash tracks/verify_daily_slice.sh  # 期望：NO_REPLY（当日有切片 commit）
+NO_REPLY
+[exit 0]
+
+===== [R4] 历史态 465e6c8（11-20 09:28 · ch6 已 v1.0 定稿）｜槽日 2026-11-19｜cron 夹具 ok×1 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<465e6c8 工作树> bash tracks/verify_daily_slice.sh  # 期望：NO_REPLY（v1.0 静默）
+NO_REPLY
+[exit 0]
+
+===== [R5] 同 R4 工作树，但**默认窗口**（不设 SLOT_DATE_OVERRIDE，09:2x 属白天）｜cron 夹具 ok×1 =====
+$ CHAPTER=ch6 REPO=<465e6c8 工作树> bash tracks/verify_daily_slice.sh  # 期望：NO_REPLY（不在验收窗口）
+NO_REPLY
+[exit 0]
+
+===== [S1] 合成态 · 切片期零产物 · 零 cron 条目｜槽日 2026-11-19 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<合成态 S1> bash tracks/verify_daily_slice.sh  # 期望：漏跑（切片 A1）
+[DRY_RUN] 槽日 2026-11-19：git 0 commit + 零条目（宿主进程当时不在位） + 今晚该做的是「切片 A1」→ 判定为宿主进程级漏跑，实际执行会立刻补跑 be2b1e10-33ef-47f4-bd25-026fef90fa86。
+[exit 0]
+
+===== [S2] 合成态 · 六场齐、无 sample · 零 cron 条目｜槽日 2026-11-19 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<合成态 S2> bash tracks/verify_daily_slice.sh  # 期望：漏跑（阶段1 合成）
+[DRY_RUN] 槽日 2026-11-19：git 0 commit + 零条目（宿主进程当时不在位） + 今晚该做的是「阶段1 合成（manuscripts/ch6-sample.md 未生成）」→ 判定为宿主进程级漏跑，实际执行会立刻补跑 be2b1e10-33ef-47f4-bd25-026fef90fa86。
+[exit 0]
+
+===== [S3] 合成态 · 六场齐+sample、无 deslop 报告 · 零 cron 条目｜槽日 2026-11-19 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<合成态 S3> bash tracks/verify_daily_slice.sh  # 期望：漏跑（阶段2 去 AI 味）
+[DRY_RUN] 槽日 2026-11-19：git 0 commit + 零条目（宿主进程当时不在位） + 今晚该做的是「阶段2 去 AI 味（tracks/ch6-deslop-report.md 未生成）」→ 判定为宿主进程级漏跑，实际执行会立刻补跑 be2b1e10-33ef-47f4-bd25-026fef90fa86。
+[exit 0]
+
+===== [S4] 合成态 · 零产物、cron 条目为 **error**（槽被宿主掐掉）｜槽日 2026-11-19 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<合成态 S4> bash tracks/verify_daily_slice.sh  # 期望：漏跑＋槽被掐
+[DRY_RUN] 槽日 2026-11-19：git 0 commit + 槽被宿主掐掉（1 条 interrupted/error 条目） + 今晚该做的是「切片 A1」→ 判定为宿主进程级漏跑，实际执行会立刻补跑 be2b1e10-33ef-47f4-bd25-026fef90fa86。
+[exit 0]
+
+===== [S5] 合成态 · 六场齐、无 sample · 窗口内**只有一条 ch7 A1 切片** commit · 零 cron 条目｜槽日 2026-11-19 —— 【本次有意变更】旧＝NO_REPLY 假绿，新＝不数 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<合成态 S5> bash tracks/verify_daily_slice.sh  # 期望：漏跑（ch7 commit 不算 ch6 交付）
+[DRY_RUN] 槽日 2026-11-19：git 0 commit + 零条目（宿主进程当时不在位） + 今晚该做的是「阶段1 合成（manuscripts/ch6-sample.md 未生成）」→ 判定为宿主进程级漏跑，实际执行会立刻补跑 be2b1e10-33ef-47f4-bd25-026fef90fa86。
+[exit 0]
+
+===== [S7] 合成态 · 六场齐+sample+deslop+**review 在**、窗口内 0 commit、「评审已落」态｜槽日 2026-11-19 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<合成态 S7> bash tracks/verify_daily_slice.sh  # 期望：ℹ️ 阶段3 已落（按⑤并行锁，0 commit 属预期）
+ℹ️ ch6（槽日 2026-11-19）：阶段 3 已落（评审报告在仓）→ 21:30 槽按⑤并行锁不重复跑评审、当晚 0 commit 属预期，无需人工查。cron 当日成功条目 1 条（0 ＝ 宿主层压根没跑；但按⑤它本来也不该产 commit → 不补跑）。现在该做的是「阶段3 已落（评审在仓）→ 等作者改稿 → 改稿后由主编出 v1.0 认可记录」。
+[exit 0]
+
+===== [S6] 合成态 · ch6 切片 commit 落在**窗口外**（11-18 10:00，槽日 11-19）· 零 cron 条目｜槽日 2026-11-19 =====
+$ CHAPTER=ch6 DRY_RUN=1 REPO=<合成态 S6> bash tracks/verify_daily_slice.sh  # 期望：漏跑（窗口纪律）
+[DRY_RUN] 槽日 2026-11-19：git 0 commit + 零条目（宿主进程当时不在位） + 今晚该做的是「切片 A1」→ 判定为宿主进程级漏跑，实际执行会立刻补跑 be2b1e10-33ef-47f4-bd25-026fef90fa86。
+[exit 0]
+
+===== [REGEN] 重新生成与本文件的校验 =====
+# 生成器（20 行核心；本次按交付约束只落本 .txt，未落第三个文件）：
+#   1) mkdtemp；写一个 stub `openclaw`：`cat "$STUB_RUNS_FILE"`；PATH 前插
+#   2) `git clone` 真仓 → 对每个历史 SHA 用 `git worktree add --detach`
+#   3) 合成态：空 repo + 只 touch 必需文件；commit 用 GIT_AUTHOR_DATE/GIT_COMMITTER_DATE 钉死
+#   4) 每个状态：`REPO=<dir> CHAPTER=ch6 SLOT_DATE_OVERRIDE=<slot> DRY_RUN=1 bash tracks/verify_daily_slice.sh`
+#   5) 夹具：ok×1 = {"entries":[{"runAtIso":"2026-11-19T21:30:00.015+09:00","status":"ok"}]}
+#            error×1 同上换 "status":"error"；零条目 = {"entries":[]}
+# 校验命令（应该输出 CH6_BASELINE_IDENTICAL）：
+#   diff <(bash <生成器>) tracks/verify_daily_slice_baseline_ch6.txt && echo CH6_BASELINE_IDENTICAL
