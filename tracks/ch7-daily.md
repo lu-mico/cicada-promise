@@ -216,18 +216,27 @@ python3 tracks/check.py manuscripts/ch7-<切片号>.md
    - 有切片后：拿 ch6-B1 复制成 `/tmp/ch7probe/ch7-B1.md` 跑 → `[WARN] ch7: 仓库侧无线级口径 → 只报数不判闸（实际 A 0／B 1492／全章 1492）` 紧接着 `[OK  ] 线级合计闸门通过`，**退出码 0**。→ **A 线 0 字也「通过」**。
    - 病根：`tracks/line_rules.py:27-32` `FLOORS` 无 ch7、`:36-40` `ROSTERS` 无 ch7、`:43-45` `PER_SCENE` 无 ch7（单场区间提示也没有）。
    - **立轨待办（主编做，本文件不改脚本）**：`FLOORS["ch7"] = {"a": 4100, "b": 4300, "total": 8400}`、`ROSTERS["ch7"] = [A1,B1,A2,B2,A3,B3]`、`PER_SCENE["ch7"] = {"A": (1367,1600), "B": (1434,1600)}`（A3 预批带待 D10 定）→ **补完当场跑一遍，把输出贴进 commit**（§八 新纪律①）。
-2d. **合成（ch7 未配置）**：
+2d. **合成（ch7 已配置 · 阶段 1 的驱动信号在 22:05 那一行）**：
    ```bash
    python3 tracks/compose.py --chapter ch7
    ```
-   **实测 2026-11-20**：`未知章节：ch7（可选：ch3, ch4, ch5, ch6）`（`tracks/compose.py:97` `CHAPTERS` 只到 ch6）→ 阶段 1 之前必须由主编加 `ch7` 配置（`order` = A1 B1 A2 B2 A3 B3、`mode` = interleaved、`slice_title` = short）。
+   ✅ **已配**（2026-11-20 G1）：`order` = A1 B1 A2 B2 A3 B3 · `mode` = interleaved · `slice_title` = short · notes = `tracks/ch7-notes.md` → **2026-11-21 实测**：`compose.py ch7` → 「找不到切片文件 ch7-A1.md，无法合成」（六场齐后即可合成；**合成后当场核末段落落 B3**）。
 2e. **去 AI 味 / 复读扫描**（必须在项目目录就地跑，白名单在 `manuscripts/.deslop-whitelist`）：
    ```bash
    python3 tracks/deslop_scan.py --chapter ch7
    python3 tracks/ngram_scan.py --chapter ch7
    ```
-   ⚠️ **实测 2026-11-20：两个脚本在「ch7 一个文件都没有」时都印「0 命中／通过」，退出码 0**——`tracks/deslop_scan.py:46` 的 `ROSTER` 只有 ch6。**空章跑出绿灯**＝R44 同族（「装得很像在跑」）。补 `ch7` 名册之后再跑；**未补之前这两条读数无意义**。
-2f. **事实源单向核对**：`python3 tracks/verify_factsource.py` 现只核 ch6 链（`:23`）——ch7 链（ch7 §三 ＝ ch6-notes §三 逐字）**尚无脚本**；补法照现有三条不变式加第四条，补完当场跑。
+   ✅ **已补**（2026-11-20 G3，2026-11-21 再补「空正文」这一路）：「ch7 一个文件都没有」→ **判红（退出码 1）**；**有文件但正文为空**（空壳切片）→ 也判红（`res["chars"]`／`scanned_hanzi` 为 0）。
+   ⚠️ **仍然必须就地跑**：复制到 /tmp 再跑会**误报 em-dash blocking=18**（白名单与稿件同目录）。
+2f. **事实源单向核对**：`python3 tracks/verify_factsource.py` → 现核**五条**（①–③ ch6 链 ＋ ④ ch7-daily §三 ＝ ch6-notes §三 逐字 ＋ ⑤ ch7-notes §三 ＝ ch7-daily §三 逐字）→ **2026-11-21 实测 ①–⑤ 全 True**。
+
+> 📌 **阶段驱动（主编的活 · 2026-11-22 补，重要）**：ch7 的 21:30 槽 prompt **只管交切片**（作者 11/20 重写，3,782 字，**没有** ch6 那套阶段判定分支）→ **六场齐之后，没人自动跑阶段 1／2／3** → 驱动信号来自 **22:05 验收（`CHAPTER=ch7`）那一行**：
+> - 「**阶段1 合成（`manuscripts/ch7-sample.md` 未生成）**」→ **主编跑** `compose.py ch7`（＋当场核末段落落 B3）
+> - 「**阶段2 去 AI 味（`tracks/ch7-deslop-report.md` 未生成）**」→ **主编跑** deslop ＋ 出报告
+> - 「**阶段3 四视角评审 + v1.0（尚无 ch7 v1.0 定稿 commit）**」→ **主编＋复审方**跑评审 → 作者改稿与 `ch7 v1.0` 定稿 → **我出认可记录**
+> - 「**ℹ️ 阶段3 已落（评审在仓）→ 等作者改稿**」→ 等作者的定稿 commit，我出认可记录
+>
+> → **不要等槽来做**：槽只交切片；**阶段由主编按上面四行驱动**（否则六场齐之后会静默停住）。
 3. `git add` + `commit -m "Yomi: ch7 <切片号> 切片 — <一句话内容>"` + `git push origin main`。
 4. 频道只回报 **commit hash + 一句话内容**；**不手报字数**（字数只认 `tracks/check.py` 的实测与退出码 0）。
 
