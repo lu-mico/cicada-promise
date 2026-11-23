@@ -30,6 +30,7 @@ import theme_rules as tr  # noqa: E402
 import span_rules as sr  # noqa: E402
 import bline_rules as br  # noqa: E402
 import line_rules as lr  # noqa: E402
+import ch8_rules as ch8r  # noqa: E402  —— ch8 章级红线（2026-11-24 立轨）
 
 # ── 主题句用例（negative case：喂必然违规的句子，断言「必须命中」）───────────
 # 前 6 条＝已交付写法回归；后 12 条＝**攻击用**（最容易漏的写法）。
@@ -82,6 +83,26 @@ SPAN_CASES = [
     ("三十七分（时刻，应放行）", '　钟面停在三十七分。', False),
     ("他今年三十岁了（年龄，应放行）", '　他今年三十岁了。', False),
     ("干净句（不得误报）", '　她把纸边对齐，抹了两遍。', False),
+]
+
+
+# ── ch8 章级用例（2026-11-24 立轨）────────────────────────────────────────
+# 结构：(名称, 正文, 是否 B 线, 章号, 是否应当报错)
+# 「三十年前」的放行由两处判据合起来做：span_rules 的章级白名单（放行一次）
+# ＋ ch8_rules 的计数（只允许 1 次／B 线 0 次）→ 这里按「有没有报错」断言。
+CH8_CASES = [
+    ("ch8·A线·「三十年前」一次·放行", '　那封信是三十年前写的。', False, 8, False),
+    ("ch8·A线·「三十年前的」一次·放行", '　那是三十年前的案子。', False, 8, False),
+    ("ch8·A线·「三十年前的」两次·拦", '　那是三十年前的案子。也是三十年前的。', False, 8, True),
+    ("ch8·B线·「三十年前」·拦", '　她记得三十年前的事。', True, 8, True),
+    ("ch7·A线·「三十年前」·拦（放行只在 ch8）", '　那封信是三十年前写的。', False, 7, True),
+    ("ch8·A线·林默·拦（D1）", '　林默站在门口。', False, 8, True),
+    ("ch8·B线·林默·拦（D4）", '　林默没有来。', True, 8, True),
+    ("ch8·B线·「自杀」·拦（D6）", '　报上写着少女自杀。', True, 8, True),
+    ("ch8·B线·「病故」·拦（D6）", '　那一栏写着病故。', True, 8, True),
+    ("ch8·B线·「意外」·只报 WARN（D6）", '　她走得意外地快。', True, 8, False),
+    ("ch8·A线·胸针·拦（D7）", '　桌上放着一枚胸针。', False, 8, True),
+    ("ch8·干净句·放行", '　她把纸边对齐，抹了两遍。', False, 8, False),
 ]
 
 
@@ -188,6 +209,14 @@ def run_suite(verbose=True):
         check(name, bool(hits) == expect, f"实际命中={hits}")
 
     if verbose:
+        print("=== ch8 章级红线（D1／D2／D4／D6／D7）===")
+    for name, body, is_b, chap, expect_err in CH8_CASES:
+        spans = sr.span_mentions(body, chapter=chap, is_b=is_b)
+        e8, _w8 = ch8r.ch8_hits(body, is_b=is_b)
+        got = bool(spans) or bool(e8)
+        check(name, got == expect_err, f"spans={spans} ch8={e8}")
+
+    if verbose:
         print("=== B 线红线（ch4 起：署名语汇 / 首字母 L / 禁用称谓）===")
     for name, body, expect, chap, is_b in B_REDLINE_CASES:
         hits = br.redline_hits(body, chapter=chap, is_b=is_b)
@@ -239,6 +268,7 @@ def prove_can_fail():
     original_kinship = br.FORBIDDEN_KINSHIP
     original_floors = lr.FLOORS
     original_bands = lr.PER_SCENE
+    original_ch8 = ch8r.ENABLED
     ok = True
     try:
         tr.THEME_PATTERNS = BROKEN_THEME
@@ -292,7 +322,17 @@ def prove_can_fail():
             ok = False
         else:
             print(f"  [OK  ] 用例会变红（如：{failed5[0]}）——证明线级用例真在检验")
+        # ch8（2026-11-24 立轨）：章级红线换成「什么都不查」的坏判据 → 整套必须变红。
+        ch8r.ENABLED = ch8r.BROKEN_ENABLED
+        failed6 = run_suite(verbose=False)
+        print(f"  旧判据（ch8 不查）下失败用例数：{len(failed6)}")
+        if not failed6:
+            print("  [FAIL] 换成「ch8 不查」的坏判据后用例仍全绿 → ch8 用例是摆设！")
+            ok = False
+        else:
+            print(f"  [OK  ] 用例会变红（如：{failed6[0]}）——证明 ch8 用例真在检验")
     finally:
+        ch8r.ENABLED = original_ch8
         tr.THEME_PATTERNS = original_theme
         sr._SPAN_PATTERNS = original_span
         br.REDLINE_WORDS = original_words

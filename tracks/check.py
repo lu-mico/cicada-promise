@@ -27,7 +27,8 @@ import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import theme_rules as tr  # noqa: E402  —— 主题句门禁（归一化匹配 + 章号分级）
 import span_rules as sr  # noqa: E402  —— 年数跨度门禁（rule 4：只拦「三十年」式推算）
-import bline_rules as br  # noqa: E402  —— B 线红线门禁（ch4 起：署名语汇 / 首字母 L / 禁用称谓）
+import bline_rules as br  # noqa: E402
+import ch8_rules as ch8r  # noqa: E402  —— ch8 章级红线（2026-11-24 立轨）  —— B 线红线门禁（ch4 起：署名语汇 / 首字母 L / 禁用称谓）
 
 HANZI = re.compile(r"[\u4e00-\u9fff]")
 YEAR = re.compile(r"\b(?:19|20)\d{2}\b")
@@ -93,7 +94,7 @@ def check_file(path):
         # 旧判据是 body.count("三十") → 把「三十多岁」这类年龄也判成 ERROR
         # （ch1 A 线「三十多岁的男人」是 Mico 已认可的交付稿，却因此挂着 ERROR 1）。
         # 同时补上旧门禁**根本没查**的两种写法：「二十九年」「多少年」。
-        spans = sr.span_mentions(body)
+        spans = sr.span_mentions(body, chapter=chapter, is_b=is_b)
         if spans:
             errors.append(f"{title}: 年数跨度出现 {len(spans)} 次（rule 4 破线）→ {spans[:3]}")
         # 软跨度（十几年／二十多年／十多年／好多年）：**不构成推算** → 只报 WARN，交评审
@@ -118,6 +119,12 @@ def check_file(path):
             whits = [w for w in B_WARN if w in body]
             if whits:
                 warns.append(f"{title}: B 线出现需确认年代感的物件 {whits}")
+        # ch8 章级红线（2026-11-24 立轨 · tracks/ch8-daily.md「八之二」D1–D7）：
+        #   按章调用，别的章**不受影响**（判据作用域不得大于它要判的事实）。
+        if chapter is not None and str(chapter).strip().lower().replace("ch", "") == "8":
+            e8, w8 = ch8r.ch8_hits(body, is_b=is_b)
+            errors.extend(f"{title}: {m}" for m in e8)
+            warns.extend(f"{title}: {m}" for m in w8)
         hits = tr.theme_hits(body_no_head)
         if hits:
             msg = f"{title}: 出现林默主题句（ch1 已立）→ {hits}"

@@ -42,15 +42,50 @@ _SOFT_SPAN_PATTERNS = [
 ]
 
 
-def span_mentions(body):
+# ── 章级放行（2026-11-24 · tracks/ch8-daily.md「八之二」D2/D12）────────────
+# plan-v2 §0 防漏规则 4：「三十年前」一词**首次出现必须 ≥ ch8**。
+#   ch3–ch7 的门禁一律拦「三十年」式硬跨度（含「三十年前」「三十年前的」）
+#   → 到了 ch8 就必须**放行这一处**，否则合规稿会被判红（11/20 纪律：判据不得罚合格稿）。
+#   放行条件三条，缺一不可：
+#     ① 章号是 ch8；② 该段是 **A 线**（B 线仍拦）；③ 该词形**只放行一次**（第二次仍拦）。
+#   其它推算写法（「三十年整」「多少年」「二十九年」「快三十年」）**一律不放行**。
+ALLOWED_SPAN_PHRASES = {
+    "ch8": ("三十年前",),
+}
+
+
+def _norm_chapter(chapter):
+    """章号归一：8 / '8' / 'ch8' 一律 → 'ch8'。"""
+    if chapter is None:
+        return None
+    s = str(chapter).strip().lower()
+    if s.isdigit():
+        s = "ch" + s
+    return s
+
+
+def span_mentions(body, chapter=None, is_b=False):
     """正文段里的年数跨度提及（返回上下文片段列表）——**硬跨度，报 ERROR**。
 
     年龄/计数/时刻写法不计入；「三十」后接年/载一律计入（默认严格）。
+
+    chapter／is_b：章级放行用（见 ALLOWED_SPAN_PHRASES）。
+    不传 chapter 时行为与放行前**完全相同**（旧调用方不受影响）。
     """
     out = []
+    allowed = () if is_b else ALLOWED_SPAN_PHRASES.get(_norm_chapter(chapter), ())
+    used = {p: 0 for p in allowed}
     for pat in _SPAN_PATTERNS:
         for m in pat.finditer(body):
-            out.append(body[max(0, m.start() - 6):m.end() + 8].replace("\n", " "))
+            frag = body[max(0, m.start() - 6):m.end() + 8].replace("\n", " ")
+            skip = False
+            for phrase in allowed:
+                if phrase in frag and used[phrase] == 0:
+                    used[phrase] += 1
+                    skip = True
+                    break
+            if not skip:
+                out.append(frag)
     return out
 
 
