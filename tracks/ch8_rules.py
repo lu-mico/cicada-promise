@@ -10,7 +10,11 @@
      （plan-v2 §0 修订要点 2）；「林默葬仪外见白布」移到 ch9（D4）→ B 线同样 0 次。
   ② **D2：「三十年前」** —— A 线**最多 1 次**（首现就在 ch8，plan-v2 §0 防漏规则 4）；
      **B 线 0 次**。**放行的那一次由 `tracks/span_rules.py` 的章级白名单负责**
-     （不���则「三十年」式硬跨度会把合规稿判红）。
+     （否则「三十年」式硬跨度会把合规稿判红）。
+     ⚠️ **颗粒度（2026-11-24 peer 抓到的洞）**：**「最多 1 次」是整章口径，不是单场口径** ——
+     作者跨六天写六场，每场各写一次 → 单场门禁全绿、整章却超了上限
+     → **整章聚合在 `chapter_hits()`（跨切片累加）＋ `tracks/ch8_chapter_checks.py`**，
+     单场判据（`ch8_hits`）只是第一道网。
   ③ **D6：她的死因定性不归本章** —— B 线不得出现「自杀」「病故」；
      「意外」只报 WARN（可能是普通词，交评审看，不直接罚）。
   ④ **D7：胸针 0 次**（四重身份里「署名」在 ch15；ch8 的题眼是合照与旧报纸）。
@@ -61,6 +65,43 @@ def ch8_hits(body, is_b=True):
     if n:
         errs.append(f"D7：出现「胸针」×{n}（ch8 胸针 0 次）")
 
+    return errs, warns
+
+
+def chapter_hits(scenes):
+    """**整章**聚合（跨切片累加）——返回 (errors, warns)。
+
+    scenes：[(标签, 正文段, 是否 B 线), ...]（只放**正文段**，写作说明行不得计入）。
+
+    为什么要有它（2026-11-24 peer 实测）：**单场门禁是「每场 1 次」**，
+    而 D2 的口径是**整章 1 次** → 作者在 A1 写一次、A3 再写一次，**每场都绿、整章超限**。
+    → 跨场必须累加后判。
+    """
+    if not ENABLED:
+        return [], []
+    errs, warns = [], []
+    a_span = b_span = 0
+    a_where, b_where = [], []
+    for label, body, is_b in scenes:
+        n = body.count(ALLOWED_PHRASE)
+        if n:
+            if is_b:
+                b_span += n
+                b_where.append(label)
+            else:
+                a_span += n
+                a_where.append(label)
+        for w in FORBIDDEN_NAMES:
+            n2 = body.count(w)
+            if n2:
+                errs.append(f"D1/D4：{label} 出现「{w}」×{n2}（ch8 两线林默 0 次出场）")
+        n3 = body.count("胸针")
+        if n3:
+            errs.append(f"D7：{label} 出现「胸针」×{n3}（ch8 胸针 0 次）")
+    if a_span > 1:
+        errs.append(f"D2：整章 A 线「{ALLOWED_PHRASE}」×{a_span}（首现只允许 1 次）→ 出现在 {'、'.join(a_where)}")
+    if b_span:
+        errs.append(f"D2：整章 B 线「{ALLOWED_PHRASE}」×{b_span}（B 线 0 次）→ 出现在 {'、'.join(b_where)}")
     return errs, warns
 
 

@@ -219,6 +219,12 @@ python3 tracks/check.py manuscripts/ch8-<切片号>.md
    ```
    ✅ 零切片判红已在 ch7 G3 修过（跨章共享脚本）→ **ch8 零切片必须判红**；改动共享脚本后 **ch6／ch7 全链必须仍 EXITCODE=0**。
 2f. **事实源单向核对**：`python3 tracks/verify_factsource.py` → ch8 链两条（⑥ ch8-daily §三 ＝ ch7-notes §三 逐字 ＋ ⑦ ch8-notes §三 ＝ ch8-daily §三 逐字）见 **G8**。
+2g. **整章级判据（跨切片累加 · G13）**：
+   ```bash
+   python3 tracks/ch8_chapter_checks.py            # 整章 A 线「三十年前」合计 ≤ 1 · B 线 0 次 · 林默/胸针 0 次
+   python3 tracks/ch8_chapter_checks.py --selftest # 自测（含跨切片负向用例）
+   ```
+   ⚠️ **单场门禁是「每场 1 次」，D2 的口径是「整章 1 次」** → **每晚都要跑这一条**（作者跨六天写六场，忘一次就绿着过去）。**零切片判红**（不是通过）。
 
 > 📌 **阶段驱动（主编的活 · 同 ch7）**：槽只交切片；**阶段由主编驱动** —— 六场齐后主编跑合成（当场核末段落落 B3）→ 去 AI 味（出报告）→ 四视角评审（落 `tracks/ch8-review.md`）→ 作者改稿与 `ch8 v1.0` 定稿 → 独立复验（**复审方拿定稿 sha 跑按章命令**）→ **主编出认可记录**。
 > 📌 **阶段 3 之前还有一道阻断项 G11**：ch8 版复审链必须落仓（ch7 的 G5 同款）→ **ch8 不能拿 ch7 的链去验**。
@@ -310,10 +316,11 @@ python3 tracks/check.py manuscripts/ch8-<切片号>.md
 | **G8** | `tracks/verify_factsource.py` 缺 ch8 链 | 加完后 ⑥ ch8-daily §三 ＝ ch7-notes §三 逐字、⑦ ch8-notes §三 ＝ ch8-daily §三 逐字 → **退出码 0** | ✅ **已落（2026-11-24）** |
 | **G9** | ch8 A 线的「三十年前」放行 ＋ ch8 章级红线 | 放行条件：**ch8 ＋ A 线 ＋ 该词形 ＋ 只 1 次**；**B 线仍拦**；**林默 0 次**；**「自杀／病故」B 线 0 次**；**胸针 0 次** | ✅ **已落（2026-11-24）**：`tracks/ch8_rules.py`（新）＋ `tracks/span_rules.py` 章级白名单 ＋ `tracks/check.py` 按章调用 ＋ `gate_selftest.py` 12 条 ch8 用例（`--prove` 实测：换成「ch8 不查」的坏判据 → 失败用例由 33 升到 38） |
 | **G10** | 主题句在 ch8 的禁区 | `tracks/theme_rules.py` 的 `banned_for` 判 `chapter >= 3` → **ch8 已在禁区内**（已核，**无需改动**） | ✅ **已核（2026-11-24）** |
+| **G13** | **D2「三十年前」的颗粒度漏洞**（2026-11-24 peer 实测抓到）：单场门禁是**每场 1 次**，D2 的口径是**整章 1 次** → 作者跨场各写一次时**每场都绿、整章超限** | 整章聚合必须跨切片累加，**只数正文段**（写作说明行不得计入 → 否则罚合格稿）；须有**跨文件**负向用例 | ✅ **已落（2026-11-24）**：`tracks/ch8_rules.py` 的 `chapter_hits()`（跨切片累加）＋ **新脚本 `tracks/ch8_chapter_checks.py`**（`--selftest` 7 条含**跨切片**用例 · `--prove` 坏判据下失败 5 条）→ **零切片判红**（ch7 G3 同款） |
 | **G11** | **ch8 版复审链必须落仓**（`tracks/ch8_review_chain.sh` ＋ `tracks/ch8_body_checks.py`） | 承 ch7 G5：ch7 的链**整份写死 ch7** → 拿它验 ch8＝验的不是本章；落仓要求：① 按章参数化或另立 ch8 版，**在合格产物上当场跑绿**；② **期望值先实测再落仓**（给语义，不写死措辞）；③ 带 `--prove` 负向自测；④ `tracks/ch5_frozen_check.py` 可原样复用 | 🔴 **未落 → 阶段 3 之前必须清空** |
 | **G12** | `tracks/verify_daily_slice.sh` 的 commit 期望串按章加 ch8 | **泛型分支已覆盖**：章号白名单放行 `ch[0-9]`（`:38`）· `DEFAULT_ORDER` 的 `*)` 分支已是 `A1 B1 A2 B2 A3 B3`（`:46`）· `CH_SLICE_RE` 的 `*)` 分支自动生成「ch8 [AB][0-9] 切片」（`:139`） | ✅ **已核（2026-11-24）**：`CHAPTER=ch8 DRY_RUN=1 bash tracks/verify_daily_slice.sh` → **NO_REPLY · 退出码 0**（非验收窗口静默正确） |
 
-📌 **G6–G9、G12 已清空**（2026-11-24 立轨当轮落仓并当场跑过）→ **A1 可以开写**；**只剩 G11**（ch8 版复审链 → 阶段 3 之前清空）。
+📌 **G6–G9、G12、G13 已清空**（2026-11-24 立轨当轮落仓并当场跑过）→ **A1 可以开写**；**只剩 G11**（ch8 版复审链 → 阶段 3 之前清空）。
 📌 **改动共享脚本后的回归**：`span_rules.py`／`check.py`／`gate_selftest.py` 动过之后，**ch6 链 EXITCODE=0** ✓ · **ch7 链（`802c090`）EXITCODE=0** ✓ · `gate_selftest.py` 全部通过 ✓ · `--prove` 会变红 ✓。
 📌 **owner（Luminary）两项仍在**：① 全书体量带子（`outline/plan-v2.md:110`「13–16 万」）vs 实测投影（地板 161,636／节奏 171,429）→ 已两次提请、不催；② **plan-v2 §5 ch8 那格的「林默葬仪外见白布」请补注「→ ch9」**（D4）。**ch8 不因 owner 未拍板而改任何口径。**
 
