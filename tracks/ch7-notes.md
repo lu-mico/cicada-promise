@@ -90,7 +90,12 @@
 ### 六、去 AI 味与评审执行记录
 
 **阶段 1｜立轨（2026-11-20 完成）**
-- `tracks/ch7-daily.md`（九节结构：§一 大纲 · §二 切片表 · §二之二 六场细则 · §三 唯一事实源 · §四 锚点 · §四之二 三条新埋线 · §五 防漏 · §六 字数 · §七 交付流程 · §八 排期纪律 · §八之二 主编裁决 11 条 · §八之三 作者裁决（D4）· §九 待裁清单）。
+- `tracks/ch7-daily.md`（九节结构：§一 大纲 · §二 切片表 · §二之二 六场细则 · §三 唯一事实源 · §四 锚点 · §四之二 三条新埋线 · §五 防漏 · §六 字数 · §七 交付流程 · §八 排期纪律 · **§八之二 主编裁决 D1–D12（12 条 · D4 已由作者在 §八之三 销账）· §八之四 作者裁决续（D1／D11 三选一）· §八之五 主编裁决（2026-11-23 · B3 接受口径 ＋ 复审唯一对照表 ＋ 阻断项 G5）** · §九 裁决清单（主编已裁 · D4 已销 · owner 一项＝全书体量带子））。
 - `tracks/ch7-notes.md`（本文件；§三 ＝ ch7-daily §三 逐字抄本）。
 - 工具侧：ch7 已进 `tracks/line_rules.py`（FLOORS／ROSTERS／PER_SCENE）· `tracks/compose.py`（ch7 配置，interleaved）· `tracks/ngram_scan.py`／`tracks/deslop_scan.py`（零切片判红）· `tracks/verify_daily_slice.sh`（ch7 切片 commit 分支）。
-- 21:30 切片 cron 与 22:05 验收脚本**待切到 ch7**（切完当轮跑一遍全链，确认 ch6 仍 EXITCODE=0）。
+- 21:30 切片 cron 与 22:05 验收脚本**已切到 ch7**（2026-11-20 09:5x 由作者改：21:30 prompt 整份重写 · 22:05 改 `CHAPTER=ch7 bash tracks/verify_daily_slice.sh`；切完当轮跑一遍全链，**ch6 仍 EXITCODE=0** ✓）。
+
+**阶段 2｜六场齐与合成（2026-11-23 完成）**
+- **六场齐**：A1 1,368 · A2 1,428 · A3 1,399 · B1 1,477 · B2 1,455 · **B3 1,456**（`9fd6fac`）→ 线级 **A 4,195（余 95）／B 4,388（余 88）／全章 8,583（余 183）**，`check_line_totals --chapter ch7` = **[OK] 闸门通过**、ERROR 0、exit 0（**齐章后才判闸** —— 之前是 PENDING）。
+- **B3 落在 §八之五 的建议档 1,434–1,600 内** → 无「实操下沿未达」的让位留痕。
+- **阶段 1 合成**：`compose.py ch7` → `manuscripts/ch7-sample.md`（16,138 字符 · 排布 interleaved · **全章最后一段落在 B3**、A 线收束在 A3 ✓）。
