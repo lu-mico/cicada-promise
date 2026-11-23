@@ -16,6 +16,7 @@
   python3 tracks/ch8_chapter_checks.py             # 扫 manuscripts/ch8-*.md
   python3 tracks/ch8_chapter_checks.py --selftest  # 自测（含**跨切片**负向用例）
   python3 tracks/ch8_chapter_checks.py --prove     # 证明用例能失败（换成不查的坏判据）
+  python3 tracks/ch8_chapter_checks.py --nightly   # 夜间槽用：**只在破线时说话**（干净 → NO_REPLY）
 退出码：0 = 通过；1 = 有破（或 --prove 未变红）。
 """
 
@@ -91,6 +92,27 @@ SELFTEST_CASES = [
 ]
 
 
+def nightly(verbose=True):
+    """夜间槽口径：**只在破线时说话**（干净 → 印 NO_REPLY＝静默）。"""
+    scenes = collect()
+    errs, warns = ch8r.chapter_hits(scenes)
+    if not scenes:
+        # 零切片：**不假警报**（夜里 22:05 若一章都还没交，交付检查会报，不必这里再报一次）
+        if verbose:
+            print("NO_REPLY")
+        return []
+    if not errs:
+        if verbose:
+            print("NO_REPLY")
+        return []
+    if verbose:
+        for e in errs:
+            print(f"[ERROR] {e}")
+        for w in warns:
+            print(f"[WARN] {w}")
+    return errs
+
+
 def selftest(verbose=True):
     failed = []
     for name, scenes, expect_err in SELFTEST_CASES:
@@ -127,6 +149,9 @@ def main():
     if "--prove" in args:
         print("=== 证明 ch8 整章级用例「能失败」===")
         return prove()
+    if "--nightly" in args:
+        nightly()
+        return 0
     if "--selftest" in args:
         print("=== ch8 整章级判据自测 ===")
         return 0 if not selftest() else 1
