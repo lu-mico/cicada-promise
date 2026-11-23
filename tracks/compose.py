@@ -108,6 +108,20 @@ HEAD_CH7 = """# 《夏蝉的诺言》第七章·样章（A/B 双线）
 > 版本：v0.1（章级首合，六场齐后生成）
 """
 
+HEAD_CH8 = """# 《夏蝉的诺言》第八章·样章（A/B 双线）
+
+> 编制：Yomi（主编）｜日期：2026-11-24 立轨
+> 对应大纲：[outline/plan-v2.md §5 ch8](../outline/plan-v2.md)
+> 合成来源：A 线 = [ch8-A1](ch8-A1.md) + [ch8-A2](ch8-A2.md) + [ch8-A3](ch8-A3.md)；
+> B 线 = [ch8-B1](ch8-B1.md) + [ch8-B2](ch8-B2.md) + [ch8-B3](ch8-B3.md)
+> 合成顺序：A1 → B1 → A2 → B2 → A3 → B3（plan-v2 §5「每章 A/B 交错」，严格逐场交替；体例同 ch4–ch7；
+> **全章最后一段落在 B3，A 线收束在 A3** —— tracks/ch8-daily.md「八之二」D9）
+> 本章双线：A 线 · 旧报纸（周睿视角，2026）｜ B 线 · 晓晓之死 · 亡者叙述（晓晓视角，1996）
+> 切片字数（check.py 实测）：六场齐后回填
+> 唯一事实源：[tracks/ch8-daily.md §三](ch8-daily.md)（2026-11-24 从 ch7-notes.md §三 抄入，**只读**）
+> 版本：v0.1（章级首合，六场齐后生成）
+"""
+
 CHAPTERS = {
     "ch3": {
         "out": "ch3-sample.md",
@@ -177,6 +191,21 @@ CHAPTERS = {
             "B": {"title": "## B 线 · 抑郁加重", "pov": "晓晓视角，1996"},
         },
         "head": HEAD_CH7,
+    },
+    "ch8": {
+        "out": "ch8-sample.md",
+        "notes": "ch8-notes.md",
+        # 交错：A/B 严格交替（plan-v2 §5「每章 A/B 交错」）；体例同 ch4–ch7。
+        # 2026-11-24 立轨（tracks/ch8-daily.md「八之二」D11）：与前四章同一手势 ——
+        # 全章末段落 B3（本章 B3 ＝ **全书第一次亡者叙述**），A 线收束在 A3。
+        "order": ["A1", "B1", "A2", "B2", "A3", "B3"],
+        "mode": "interleaved",
+        "slice_title": "short",  # H2 = "### A1 · 档案盒"（去生产代号，沿用 2026-11-05 体例裁定）
+        "lines": {
+            "A": {"title": "## A 线 · 旧报纸", "pov": "周睿视角，2026"},
+            "B": {"title": "## B 线 · 坠落", "pov": "晓晓视角，1996"},
+        },
+        "head": HEAD_CH8,
     },
 }
 
