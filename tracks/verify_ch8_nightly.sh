@@ -10,12 +10,27 @@
 #
 # 输出语义（与 verify_daily_slice.sh 一致）：一切正常 → **只印 NO_REPLY**（＝静默，不刷屏）；
 # 有破线 → 印破线内容（进频道，由人看）。**退出码恒 0**（不拿退出码吓人，避免假警报）。
+#
+# ⚠️ **测副本必须显式给 REPO**（2026-11-24 实测踩到）：本脚本早先写死
+#    `REPO="${REPO:-<真仓绝对路径>}"` → 在 /tmp 的 clone 里直接跑它，**实际判的是真仓**
+#    （真仓零切片 → 一切「绿」→ 差点误报「整章判据没接上」）。
+#    现在默认取**本脚本所在仓的根**（scripts 目录的上一级）→ **副本测副本、真仓跑真仓**；
+#    `REPO=` 仍可显式覆盖。
+#    ⚠️ **测试必须带 DRY_RUN=1**：`verify_daily_slice.sh` 判定「宿主漏跑」时会**真的**
+#    `openclaw cron run be2b1e10` **补跑**（那会把作者叫醒）→ 端到端测试一律 `DRY_RUN=1`。
+#    （生产路径本来就该补跑 —— 这是对的；只是测的人要知道。）
+#
+# 📌 **登记未做**：退出码恒 0 ⇒ cron `lastRunStatus` 永远是 ok → **万一 announce 投递失败，
+#    破线就只剩日志**（频道里没有）。本轮判定：**保持退出码恒 0**（house 规矩：不拿退出码吓人）
+#    → 投递失败这一情形登记为「未做」，等真有需要再改（改法：破线时 exit 1 ＋ 给 22:05 槽加 failureAlert）。
 set -u
-REPO="${REPO:-/Users/lumico/.openclaw/workspace-yomi/projects/cicada-promise}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="${REPO:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 cd "$REPO" 2>/dev/null || { echo "🔴 ch8 夜间验收失败：进不了项目仓 $REPO"; exit 0; }
 [ -e "$REPO/.git" ] || { echo "🔴 ch8 夜间验收失败：REPO 不是 git 仓 $REPO → 拒绝在未知目录上判账"; exit 0; }
 
-SLICE_OUT="$(CHAPTER=ch8 bash tracks/verify_daily_slice.sh 2>&1)"
+# ⚠️ REPO 要**显式透传**给内层脚本：它自己也有默认路径，不传就会去判真仓（上面那个坑）。
+SLICE_OUT="$(REPO="$REPO" CHAPTER=ch8 bash tracks/verify_daily_slice.sh 2>&1)"
 
 CHAP_OUT=""
 if ls manuscripts/ch8-*.md >/dev/null 2>&1; then
