@@ -34,6 +34,7 @@
 import argparse
 import json
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -51,6 +52,24 @@ DEFAULT_ROSTER = ["A1", "B1", "A2", "B2", "A3", "B3"]
 
 # 正文段之间的分隔符：非空白 → 归一化后保留 → 阻断跨段误匹配
 SEP = ""
+
+
+# **小节标题行**（`#### 一` / `## 三` 之类）是**元数据**，不是正文。
+# 为什么要单独认它（2026-11-24 修）：
+#     `extract_bodies()` 只按 `ck.SECTION`（`^##\s+[AB]\s*(?:线|\d)`）与 `ck.END_MARK`
+#     切段 → 正文里的 `#### 一`／`#### 八` 这种**小节标题留在段内**；
+#     而 `normalize()` 把换行与空白全删掉 → 标题的字符（`####`）留在归一化串里 →
+#     「上一小节末句 ＋ 标题 ＋ 下一小节首句」会被**拼成一句**去比对。
+#     实测假命中（ch7 复审时由复审方抓出）：ch7-A3 ↔ ch5-B2
+#     「了一下，才收回去。##」＝ 7 汉字 ＋ 4 个 `#` → 长度 11 ≥ 提示层 10 → **假命中**。
+#     危险在于：标题字符一旦在两侧**位置相同**（两场的小节编号都是 `####`），
+#     就能把两段不相干的话连起来 → **将来跨标题拼出 ≥14 字就会变成假红**（罚没复读的章）。
+# 口径：**标题行只保留行结构（换行），内容清空** → 行号映射（`line_of`）不受影响，
+#     归一化后标题字符不再进入被比较的正文。
+# 📌 **边界（已知残留，不追求完备）**：**段落**之间的换行仍被归一化去掉，
+#     即「上一段末句 ＋ 下一段首句」仍可能被拼起来比 → 属既有行为，本次不动
+#     （尺子的**分界**优先于**完备**：先切小节这一层，剩下的记为已知限制）。
+HEADING = re.compile(r"^#{2,6}\s*")
 
 
 def normalize(text):
@@ -86,7 +105,11 @@ def extract_bodies(path):
         j = i + 1
         buf = []
         while j < len(lines) and not ck.END_MARK.match(lines[j]) and not ck.SECTION.match(lines[j]):
-            buf.append(lines[j])
+            # 小节标题行 → 内容清空、只留行结构（见 HEADING 的说明）
+            if HEADING.match(lines[j]):
+                buf.append("")
+            else:
+                buf.append(lines[j])
             j += 1
         if buf:
             out.append(("\n".join(buf), i + 2))  # buf 首行 = 标题行下一行（行号从 1 起）
@@ -304,6 +327,37 @@ def selftest():
     rep = normalize("他把碗放在门槛上，碗口朝下。过了很久，他把碗放在门槛上，碗口朝下。")[0]
     sr = self_repeats(rep, k, 12)
     cases.append(("同场复读 → 必须命中", bool(sr) and max(r[2] for r in sr) >= 12))
+    # —— 2026-11-24 新增（文件级）：跨小节标题的假命中 vs 同小节内的真复读 ——
+    # 反例（改前必须命中、改后必须不命中）：两场正文末尾句相同（**7 字符**），
+    #   两侧接下来都是 `####` 小节标题 → 改前标题字符把两段不相干的话拼起来
+    #   （7 + 4 = 11 ≥ 提示层 10 → 报假提示）；改后标题内容不进正文
+    #   → 只剩 7 字符 < 10 → 不报。
+    #   （对照真实实例：ch7-A3 ↔ ch5-B2「了一下，才收回去。##」＝ 9 字符 + 2 个 # ＝ 11）
+    import tempfile
+    _d = pathlib.Path(tempfile.mkdtemp(prefix="ngram-selftest-"))
+    _a = _d / "a.md"
+    _b = _d / "b.md"
+    _a.write_text("## A1 · 测试\n\n#### 一\n他把手放下，指头才收回。\n\n#### 八\n屋里没有声音。\n", encoding="utf-8")
+    _b.write_text("## A1 · 测试\n\n#### 三\n她把碗挪开，指头才收回。\n\n#### 九\n后来就没有再提。\n", encoding="utf-8")
+    _hits = []
+    for _ba, _ in extract_bodies(_a):
+        for _bb, _ in extract_bodies(_b):
+            _na, _ = normalize(_ba)
+            _nb, _ = normalize(_bb)
+            _hits += [r for r in common_runs(_na, _nb, k) if r[2] >= 10]
+    cases.append(("跨小节标题拼接 → 不得命中（标题是元数据，不进正文）", not _hits))
+    # 正例（必须仍命中）：同小节内的真复读 12 汉字 → 判据不许被改钝。
+    _c = _d / "c.md"
+    _e = _d / "e.md"
+    _c.write_text("## A1 · 测试\n\n#### 一\n他把碗放在门槛上，碗口朝下。\n\n#### 二\n过了很久，他把碗放在门槛上，碗口朝下。\n", encoding="utf-8")
+    _e.write_text("## B1 · 测试\n\n#### 一\n他把碗放在门槛上，碗口朝下。\n", encoding="utf-8")
+    _hits2 = []
+    for _bc, _ in extract_bodies(_c):
+        for _be, _ in extract_bodies(_e):
+            _nc, _ = normalize(_bc)
+            _ne, _ = normalize(_be)
+            _hits2 += [r for r in common_runs(_nc, _ne, k) if r[2] >= 12]
+    cases.append(("同小节内的真复读 → 必须仍命中（判据不许被改钝）", bool(_hits2)))
     print("=== ngram_scan 自测 ===")
     ok = True
     for name, passed in cases:
