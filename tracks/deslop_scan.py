@@ -15,7 +15,7 @@
       复制到 /tmp 再跑会让白名单失效、误报 em-dash blocking=18）：
     python3 tracks/deslop_scan.py                 # 默认 ch6
     python3 tracks/deslop_scan.py --chapter ch7
-    python3 tracks/deslop_scan.py --keep          # 保留临时正文段文件（调试用）
+    python3 tracks/deslop_scan.py --keep          # 保留临时正文段文件（调试用；残留是**设计如此**，不是缺陷）
 
 口径：
     正文段 ＝ `tracks/check.py` 的正文段（切片/分线标题行 → 「## 写作说明」前），
@@ -85,7 +85,10 @@ def run_detector(script, target):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--chapter", default="ch6")
-    ap.add_argument("--keep", action="store_true", help="保留临时正文段文件")
+    ap.add_argument("--keep", action="store_true",
+                    help="保留临时正文段文件（**调试用**；带 --keep 跑出来的残留是**设计如此**，"
+                         "不是缺陷 → 判「残留 = 0」必须**不带 --keep** 跑，否则就是拿一把注定会红的尺子"
+                         "去量合格产物）")
     args = ap.parse_args()
 
     roster = ROSTER.get(args.chapter, ["A1", "B1", "A2", "B2", "A3", "B3"])
