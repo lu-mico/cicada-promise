@@ -1,0 +1,6 @@
+# 检测器临时文件（正文切片，落仓前必须清干净；白名单按路径生效 → 不要搬到 /tmp）
+manuscripts/.tmp-body-*.md
+
+# Python
+__pycache__/
+*.pyc

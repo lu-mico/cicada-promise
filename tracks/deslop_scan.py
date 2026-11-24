@@ -106,6 +106,22 @@ def main():
     scanned_hanzi = 0  # 扫到的**正文**汉字数（不含标题行）—— 为 0 说明「什么都没扫」
     detector_failed = 0  # 检测器不可用的场次数（node 缺失／检测器报错）→ 什么都没查 ≠ blocking 0
     tmp_files = []
+    # 📌 清理挂 atexit（2026-11-24）：原来清理在主循环**之后**的普通语句 →
+    #   脚本崩掉或被 kill 时，`manuscripts/.tmp-body-<场>.md` 会留成未跟踪垃圾。
+    #   ⚠️ **不要把这些临时文件搬到 /tmp**：检测器白名单按**路径**生效
+    #   （:15）→ 搬走会让白名单失效（em-dash 误报 blocking=18）→ **正解是 finally/atexit，目录不动**。
+    import atexit
+
+    def _cleanup_tmp_files():
+        if getattr(args, "keep", False):
+            return
+        for t_ in tmp_files:
+            try:
+                t_.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    atexit.register(_cleanup_tmp_files)
     for s in roster:
         src = ROOT / "manuscripts" / f"{args.chapter}-{s}.md"
         if not src.exists():
