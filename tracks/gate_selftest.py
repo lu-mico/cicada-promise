@@ -105,6 +105,15 @@ CH8_CASES = [
     ("ch8·干净句·放行", '　她把纸边对齐，抹了两遍。', False, 8, False),
 ]
 
+# 传错类型的用例（2026-11-24 加固）：逐场判据收**字符串**、整章判据收**场景列表**；
+# 传错必须**抛错**，不能静默返回「无错」（假绿家族：list.count(tuple) 恒为 0）。
+CH8_TYPE_CASES = [
+    ("逐场判据收场景列表 → 必须抛错", "ch8_hits", [("A1", "　正文。", False)]),
+    ("逐场判据收 None → 必须抛错", "ch8_hits", None),
+    ("整章判据收字符串 → 必须抛错", "chapter_hits", "　正文。"),
+    ("整章判据收三元组缺字段 → 必须抛错", "chapter_hits", [("A1", "　正文。")]),
+]
+
 
 # ── B 线红线用例（ch4 起：署名语汇 / 首字母 L / 禁用称谓）────────────────────
 # 结构：(名称, 正文, 是否应当命中, 章号, 是否 B 线)
@@ -215,6 +224,16 @@ def run_suite(verbose=True):
         e8, _w8 = ch8r.ch8_hits(body, is_b=is_b)
         got = bool(spans) or bool(e8)
         check(name, got == expect_err, f"spans={spans} ch8={e8}")
+
+    if verbose:
+        print("=== ch8 判据的**参数类型**（传错必须抛错，不得静默放行）===")
+    for name, fn, arg in CH8_TYPE_CASES:
+        try:
+            getattr(ch8r, fn)(arg)
+            raised = False
+        except TypeError:
+            raised = True
+        check(name, raised)
 
     if verbose:
         print("=== B 线红线（ch4 起：署名语汇 / 首字母 L / 禁用称谓）===")

@@ -36,7 +36,18 @@ ALLOWED_PHRASE = "三十年前"
 
 
 def ch8_hits(body, is_b=True):
-    """查 ch8 章级红线，返回 (errors, warns) 两个列表（空＝通过）。"""
+    """查 ch8 章级红线（**单场**口径），返回 (errors, warns) 两个列表（空＝通过）。
+
+    ⚠️ **参数必须是正文段字符串**（2026-11-24 加固）：曾经有人把
+    `[(标签, 正文, is_b), ...]` 这种**场景列表**传进来 → `list.count(tuple)` 恒为 0
+    → **静默返回「无错」**（假绿！差点被当成「整章判据没接上」）。
+    → 现在**传错类型直接抛 TypeError**，不再静默放行。
+    """
+    if not isinstance(body, str):
+        raise TypeError(
+            "ch8_hits(body) 只收**正文段字符串**；整章聚合请用 chapter_hits(scenes)。"
+            f"（收到 {type(body).__name__}）"
+        )
     if not ENABLED:
         return [], []
     errs, warns = [], []
@@ -79,6 +90,12 @@ def chapter_hits(scenes):
     """
     if not ENABLED:
         return [], []
+    for item in scenes:
+        if not (isinstance(item, (tuple, list)) and len(item) == 3 and isinstance(item[1], str)):
+            raise TypeError(
+                "chapter_hits(scenes) 收 [(标签, 正文段字符串, 是否 B 线), ...]；"
+                f"收到不合式的项：{item!r}"
+            )
     errs, warns = [], []
     a_span = b_span = 0
     a_where, b_where = [], []
