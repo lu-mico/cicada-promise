@@ -107,7 +107,10 @@ def main():
     detector_failed = 0  # 检测器不可用的场次数（node 缺失／检测器报错）→ 什么都没查 ≠ blocking 0
     tmp_files = []
     # 📌 清理挂 atexit（2026-11-24）：原来清理在主循环**之后**的普通语句 →
-    #   脚本崩掉或被 kill 时，`manuscripts/.tmp-body-<场>.md` 会留成未跟踪垃圾。
+    #   脚本**中途出错**时，`manuscripts/.tmp-body-<场>.md` 会留成未跟踪垃圾。
+    #   ⚠️ **atexit 覆盖：正常结束 · 未捕获异常 · SIGINT**；
+    #      **不覆盖 SIGTERM／SIGKILL**（实测：这两种会留 1 个临时文件）
+    #      → 残留**不会误提交**（`.gitignore` 已挡 `manuscripts/.tmp-body-*.md`）。
     #   ⚠️ **不要把这些临时文件搬到 /tmp**：检测器白名单按**路径**生效
     #   （:15）→ 搬走会让白名单失效（em-dash 误报 blocking=18）→ **正解是 finally/atexit，目录不动**。
     import atexit
