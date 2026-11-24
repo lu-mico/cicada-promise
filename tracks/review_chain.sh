@@ -83,21 +83,55 @@ step() {
 #     为什么不能只用 `git log --oneline --grep`：--grep 也搜**正文**，历史上几支
 #     工具类提交的正文里讨论过「ch7 v1.0」→ 会假绿。这里加一道 subject 过滤；
 #     并且排除 v1.0.1（定稿版必须是 v1.0，期望串不放宽）。
+# [0] 定稿 commit：**必须带 sha**（复审规矩＝拿定稿 sha 跑）。
+#     为什么改成必须带（2026-11-24 · peer 抓的洞）：原来 sha 只是**标签**——
+#     链里真正做门禁的是 `git log --grep "<章> v1.0"`（扫全历史）→ 不传 sha 时
+#     它照样能“绿”，而打印的「目标 : <未指定，用 HEAD>」**与实际行为不符**
+#     （实际取的是最近一笔标题匹配的 commit，不是 HEAD）→ **「忘了传 sha 也绿着过」
+#     是最危险的那种绿**（判据罚不到人，还让人以为验过了）。
+#     现在：**不传 sha → 直接判红**；传了 → **门禁就判那一笔**（sha 的 subject 须是
+#     「<章> v1.0」，且排除 v1.0.1）。历史匹配列表只作信息附上。
 check_final_commit() {
-  local hits matched
+  local hits matched sha_line sha_subj
+  if [ -z "$SHA" ]; then
+    echo "🔴 未传定稿 sha —— 本步直接判红"
+    echo "   用法：${CHAPTER} 复审链必须带 sha：zsh tracks/review_chain.sh <定稿sha>"
+    echo "   （理由：sha 只当标签时，「忘了传 sha」也能绿过＝最危险的那种绿）"
+    echo "exit=1"
+    FAIL=1
+    return 0
+  fi
+  sha_line=$(git log -1 --format='%h %s' "$SHA" 2>/dev/null || true)
+  if [ -z "$sha_line" ]; then
+    echo "🔴 找不到 sha $SHA —— 本步判红"
+    echo "exit=1"
+    FAIL=1
+    return 0
+  fi
+  sha_subj="${sha_line#* }"
   hits=$(git log --format='%h %s' --grep="${CHAPTER} v1.0")
-  matched=$(printf '%s\n' "$hits" | grep -E "${CHAPTER} v1\.0([^0-9]|$)" || true)
+  matched=$(printf '%s\n' "$hits" | grep -E "${CHAPTER} v1\.0([^0-9.]|$)" || true)
   if [ -z "$matched" ]; then
     if [ -n "$hits" ]; then
       echo "（正文提到过 ${CHAPTER} v1.0、但没有 subject 是定稿的 commit：）"
       printf '%s\n' "$hits" | sed 's/^/  · /'
     fi
-    echo "（无「${CHAPTER} v1.0」定稿 commit —— 本章尚未定稿，预期红）"
+    echo "（本章无「${CHAPTER} v1.0」定稿 commit —— 本章尚未定稿，预期红）"
     echo "exit=1"
     FAIL=1
-  else
-    printf '%s\n' "$matched"
+    return 0
+  fi
+  if printf '%s\n' "$sha_subj" | grep -qE "${CHAPTER} v1\.0([^0-9.]|$)"; then
+    echo "目标 sha：$sha_line"
+    echo "（本章标题为定稿的 commit：）"
+    printf '%s\n' "$matched" | sed 's/^/  · /'
     echo "exit=0"
+  else
+    echo "🔴 给定 sha $SHA 的 subject 不是本章定稿：$sha_subj"
+    echo "   （本章标题为定稿的 commit：）"
+    printf '%s\n' "$matched" | sed 's/^/  · /'
+    echo "exit=1"
+    FAIL=1
   fi
 }
 
@@ -105,7 +139,7 @@ check_final_commit() {
 echo "=== ${CHAPTER} 复审链 $(date '+%Y-%m-%d %H:%M:%S %Z') ==="
 echo "repo : $REPO"
 echo "HEAD : $(git log --oneline -1)"
-echo "目标 : ${SHA:-<未指定，用 HEAD>}"
+echo "目标 : ${SHA:-<未传 → [0] 判红>}"
 echo "dirty: $(git status --porcelain | wc -l | tr -d ' ') 个文件"
 
 echo ""

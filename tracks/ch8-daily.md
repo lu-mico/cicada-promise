@@ -223,7 +223,7 @@ python3 tracks/check.py manuscripts/ch8-<切片号>.md
 2h. **本章复审链（复审方跑的就是这一条 · G11a）**：
    ```bash
    cd /Users/lumico/.openclaw/workspace-yomi/projects/cicada-promise   # 必须在仓库根就地跑
-   CHAPTER=ch8 zsh tracks/review_chain.sh <定稿sha>
+   CHAPTER=ch8 zsh tracks/review_chain.sh <定稿sha>          # **sha 必带**（不传 → [0] 直接判红）
    CHAPTER=ch8 zsh tracks/review_chain.sh --prove     # 证明判据能失败
    ```
    退出码 0 = 全链绿；**⏳ 在 `tracks/ch8_body_checks.py` 落仓前（G11b），[4] 会主动报「本链不完整」并判红** —— 那不是作者写错，是**本章的正文段口径判据还没建**。
@@ -327,7 +327,7 @@ python3 tracks/check.py manuscripts/ch8-<切片号>.md
 | **G9** | ch8 A 线的「三十年前」放行 ＋ ch8 章级红线 | 放行条件：**ch8 ＋ A 线 ＋ 该词形 ＋ 只 1 次**；**B 线仍拦**；**林默 0 次**；**「自杀／病故」B 线 0 次**；**胸针 0 次** | ✅ **已落（2026-11-24）**：`tracks/ch8_rules.py`（新）＋ `tracks/span_rules.py` 章级白名单 ＋ `tracks/check.py` 按章调用 ＋ `gate_selftest.py` 12 条 ch8 用例（`--prove` 实测：换成「ch8 不查」的坏判据 → 失败用例由 33 升到 38） |
 | **G10** | 主题句在 ch8 的禁区 | `tracks/theme_rules.py` 的 `banned_for` 判 `chapter >= 3` → **ch8 已在禁区内**（已核，**无需改动**） | ✅ **已核（2026-11-24）** |
 | **G13** | **D2「三十年前」的颗粒度漏洞**（2026-11-24 实测抓到）：单场门禁是**每场 1 次**，D2 的口径是**整章 1 次** → 作者跨场各写一次时**每场都绿、整章超限** | 整章聚合必须跨切片累加，**只数正文段**（写作说明行不得计入 → 否则罚合格稿）；须有**跨文件**负向用例 | ✅ **已落（2026-11-24）**：`tracks/ch8_rules.py` 的 `chapter_hits()`（跨切片累加）＋ **新脚本 `tracks/ch8_chapter_checks.py`**（`--selftest` 7 条含**跨切片**用例 · `--prove` 坏判据下失败 5 条 · `--nightly` 夜间口径）＋ **新脚本 `tracks/verify_ch8_nightly.sh`**（22:05 槽用的夜验包装：切片检查 ＋ 整章聚合，**干净只印 NO_REPLY**、**退出码恒 0** 不假警报）→ **零切片判红**（ch7 G3 同款）· 端到端实测（A1 1 次 → NO_REPLY · A1+A3 各 1 次 → 破线并点名两个文件 · 只写在写作说明 → NO_REPLY） |
-| **G11** | **本章版复审链必须落仓**（承 ch7 G5：ch7 的链**整份写死 ch7** → 拿它验 ch8＝验的不是本章） | 落仓要求：① 按章参数化或另立本章版，**在合格产物上当场跑绿**；② **期望值先实测再落仓**（给语义，不写死措辞）；③ 带 `--prove` 负向自测；④ `tracks/ch5_frozen_check.py` 可原样复用 | 🟡 **拆两半**：**G11a ✅ 已落（2026-11-24）** —— **一条链按章参数化**：`tracks/review_chain.sh`（`CHAPTER=ch8 zsh tracks/review_chain.sh <sha>`）＋ `tracks/ch7_review_chain.sh` 改为兼容入口（固定 CHAPTER=ch7 → **读数与并入前逐字相同**，已用并入前基线逐行 diff 验证）· 链内含**整章级判据** [2b]（有才跑）· 缺该章正文段判据脚本时**明说「本链不完整」并判红** · compose 退出码非 0 也判红（原先只看 diff，会漏）<br>⏳ **G11b 未落**：`tracks/ch8_body_checks.py`（本章的正文段口径门禁）—— **期望值必须在 ch8 合格稿上实测后再落仓**（不能先写死措辞）→ **等六场齐后再建**；**在此之前 ch8 的复审链不完整**（[4] 会主动报红） |
+| **G11** | **本章版复审链必须落仓**（承 ch7 G5：ch7 的链**整份写死 ch7** → 拿它验 ch8＝验的不是本章） | 落仓要求：① 按章参数化或另立本章版，**在合格产物上当场跑绿**；② **期望值先实测再落仓**（给语义，不写死措辞）；③ 带 `--prove` 负向自测；④ `tracks/ch5_frozen_check.py` 可原样复用 | 🟡 **拆两半**：**G11a ✅ 已落（2026-11-24）** —— **一条链按章参数化**：`tracks/review_chain.sh`（`CHAPTER=ch8 zsh tracks/review_chain.sh <sha>`）＋ `tracks/ch7_review_chain.sh` 改为兼容入口（固定 CHAPTER=ch7 → **读数与并入前逐字相同**，已用并入前基线逐行 diff 验证）· 链内含**整章级判据** [2b]（有才跑）· 缺该章正文段判据脚本时**明说「本链不完整」并判红** · compose 退出码非 0 也判红（原先只看 diff，会漏）<br>· 🔴 **必须带定稿 sha**（2026-11-24 · peer 抓的洞）：原来 sha 只是**标签**（真正做门禁的是 `git log --grep` 扫全历史）→ **不传 sha 也能绿**，且打印的「目标：未指定，用 HEAD」**与实际行为不符** → 「忘了传 sha 也绿着过」是最危险的那种绿 → 现在**不传 sha 直接判红**、传了则**门禁就判那一笔**（subject 须是「<章> v1.0」，排除 v1.0.1）<br>⏳ **G11b 未落**：`tracks/ch8_body_checks.py`（本章的正文段口径门禁）—— **期望值必须在 ch8 合格稿上实测后再落仓**（不能先写死措辞）→ **等六场齐后再建**；**在此之前 ch8 的复审链不完整**（[4] 会主动报红） |
 | **G12** | `tracks/verify_daily_slice.sh` 的 commit 期望串按章加 ch8 | **泛型分支已覆盖**：章号白名单放行 `ch[0-9]`（`:38`）· `DEFAULT_ORDER` 的 `*)` 分支已是 `A1 B1 A2 B2 A3 B3`（`:46`）· `CH_SLICE_RE` 的 `*)` 分支自动生成「ch8 [AB][0-9] 切片」（`:139`） | ✅ **已核（2026-11-24）**：`CHAPTER=ch8 DRY_RUN=1 bash tracks/verify_daily_slice.sh` → **NO_REPLY · 退出码 0**（非验收窗口静默正确） |
 
 📌 **G6–G9、G12、G13、G11a 已清空**（2026-11-24 立轨当轮落仓并当场跑过）→ **A1 可以开写**；**只剩 G11b**（ch8 的正文段口径门禁 → **等六场齐、期望值在合格稿上实测后再落**；在此之前链的 [4] 会主动报红）。
