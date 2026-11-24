@@ -88,6 +88,11 @@ def chapter_hits(scenes):
     而 D2 的口径是**整章 1 次** → 作者在 A1 写一次、A3 再写一次，**每场都绿、整章超限**。
     → 跨场必须累加后判。
     """
+    if scenes is None or isinstance(scenes, str):
+        raise TypeError(
+            "chapter_hits(scenes) 收 [(标签, 正文段字符串, 是否 B 线), ...]；"
+            f"你传的是 {type(scenes).__name__}（字符串/None 请改传场景列表）"
+        )
     if not ENABLED:
         return [], []
     for item in scenes:
