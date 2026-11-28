@@ -102,6 +102,7 @@ ITEMS = [
     (19, "台词口径锁：B 线引号台词总数", "B", "quote_total", None, QUOTE_TOTALS["B"]),
     (20, "D13：B3 引号台词 0 次（亡者叙述不出现对话）", "B3", "quote_total", None, 0),
     (21, "章末落点：合成稿场序 A1 B1 A2 B2 A3 B3，末节是 B3", "SAMPLE", "sample_order", None, None),
+    (22, "小节序号：每场正文段内「## 一/## 二…」**唯一且连续**（无重号、无跳号）", "ALL", "section_seq", None, None),
 ]
 
 
@@ -216,6 +217,63 @@ def scan_quote_total(data, scope):
     return sum(per.values()), per, lines
 
 
+CN_NUM = "一二三四五六七八九十"
+_SECTION_HEAD_RE = re.compile(r"^##\s+([一二三四五六七八九十]+)\s*$", flags=re.M)
+
+
+def cn_to_int(s):
+    """中文小节序号 → 整数（支持 一…十九、二十…）。"""
+    if not s:
+        return None
+    if s == "十":
+        return 10
+    if s.startswith("十"):
+        return 10 + CN_NUM.index(s[1]) + 1
+    if "十" in s:
+        head, tail = s.split("十", 1)
+        base = CN_NUM.index(head) + 1
+        return base * 10 + (CN_NUM.index(tail) + 1 if tail else 0)
+    return CN_NUM.index(s) + 1
+
+
+def scan_section_seq(data):
+    """查每场正文段的小节序号是否唯一且从「一」连续。
+
+    为什么要有这条（2026-11-28 实测踩到）：作者新写的一���里**撞了两个「## 四」**
+    → 读者看到两个第四节；**而 check.py / body_checks 全绿**（正文段口径不数小节序号）
+    → 这是一条**机器门禁不覆盖**的结构缺陷。
+    """
+    hits = []
+    for name, segs in data.items():
+        for title, buf, abs_start in segs:
+            seq = []
+            for offset, line in enumerate(buf):
+                m = _SECTION_HEAD_RE.match(line)
+                if m:
+                    seq.append((m.group(1), abs_start + offset))
+            if not seq:
+                continue
+            nums = [cn_to_int(s) for s, _ in seq]
+            want = list(range(1, len(nums) + 1))
+            if nums != want:
+                bad = []
+                seen = {}
+                for (s, ln), n in zip(seq, nums):
+                    seen.setdefault(n, []).append(ln)
+                for n, lns in seen.items():
+                    if len(lns) > 1:
+                        bad.append("序号「%s」重号（行 %s）" % (CN_NUM[n - 1], "／".join(map(str, lns))))
+                missing = [CN_NUM[i - 1] for i in want if i not in nums]
+                if missing:
+                    bad.append("缺号：%s" % "／".join(missing))
+                jumps = [(CN_NUM[nums[i] - 1], CN_NUM[nums[i + 1] - 1])
+                         for i in range(len(nums) - 1) if nums[i + 1] != nums[i] + 1]
+                if jumps:
+                    bad.append("跳号：%s" % "／".join("%s→%s" % j for j in jumps))
+                hits.append((name, seq[0][1], title, "小节序号", len(bad), "；".join(bad)))
+    return hits
+
+
 def sample_order_status(sample_path):
     """合成稿的场序与末节核（D9：全章最后一段必须落在 B3）。"""
     p = pathlib.Path(sample_path)
@@ -266,6 +324,14 @@ def evaluate(files, sample_path=None):
             want_s = "／".join("%s＝%d" % (t, w) for t, w in zip(tokens, want))
             results.append(dict(num=num, sem=sem, scope=scope, ok=ok_all,
                                  got=got, want=want_s, where=where, info=info))
+            continue
+        elif kind == "section_seq":
+            hits = scan_section_seq(data)
+            bad = [h for h in hits if h[4] > 0]
+            got = sum(h[4] for h in bad)
+            where = ["%s:%d [%s] %s" % (h[0], h[1], h[2], h[5]) for h in bad]
+            results.append(dict(num=num, sem=sem, scope="全章", ok=(got == 0),
+                                 got=got, want=0, where=where, info=info))
             continue
         elif kind == "sample_order":
             sp = sample_path or (ROOT / "manuscripts" / "ch8-sample.md")
@@ -460,6 +526,24 @@ def prove_can_fail():
                                    sample_path=ROOT / "manuscripts" / "ch8-sample.md")
         print(f"  [{'OK' if ok_insert and scope_b_red else 'FAIL'}] 用例7：B2 正文写「自杀」→ 判红（第 11 条只罚 B 线）")
         results.append(ok_insert and scope_b_red)
+
+        # 用例 7b：小节序号重号 → 第 22 条必须红（作者实踩过的洞：两个「## 四」）
+        d = tmp / "mut_dupsec"
+        files = _copy_slices(real, d)
+        b3 = d / "manuscripts" / "ch8-B3.md"
+        before = b3.read_text(encoding="utf-8")
+        heads = re.findall(r"^##\s+([一二三四五六七八九十]+)\s*$", before, flags=re.M)
+        if len(heads) >= 5:
+            dup = heads[3]
+            b3.write_text(before.replace(f"## {heads[4]}\n", f"## {dup}\n", 1), encoding="utf-8")
+            changed = b3.read_text(encoding="utf-8") != before
+            dup_red = not run_gate(files, verbose=False,
+                                   sample_path=ROOT / "manuscripts" / "ch8-sample.md")
+            print(f"  [{'OK' if changed and dup_red else 'FAIL'}] 用例7b：把第 5 节改成与第 4 节同号（重号）→ 判红（第 22 条能失败）")
+            results.append(changed and dup_red)
+        else:
+            print("  [跳过] 用例7b：小节数不足，无法造重号")
+            results.append(False)
 
         # 用例 8：合成稿末节核 —— 场序被打乱 → 第 21 条必须红
         d = tmp / "sample_bad"
